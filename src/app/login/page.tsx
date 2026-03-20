@@ -7,7 +7,7 @@ import {
   User, Lock, Eye, EyeOff, Mail, Phone, 
   Shield, Loader2, CheckCircle, ArrowRight, 
   Building2, Sparkles, Zap, Globe, Moon, Sun,
-  ScanFace, Fingerprint, QrCode, ChevronRight
+  ScanFace, Fingerprint, QrCode, ChevronRight, X
 } from "lucide-react"
 import SmartChineseLogo from "@/components/SmartChineseLogo"
 
@@ -74,6 +74,12 @@ function LoginContent() {
   const [agreeTerms, setAgreeTerms] = useState(false)
   const [currentTheme, setCurrentTheme] = useState<Theme>("blue")
   const [loginMethod, setLoginMethod] = useState<"password" | "sms" | "qrcode">("password")
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotPhone, setForgotPhone] = useState("")
+  const [forgotSmsCode, setForgotSmsCode] = useState("")
+  const [forgotNewPassword, setForgotNewPassword] = useState("")
+  const [forgotStep, setForgotStep] = useState(1)
+  const [forgotSuccess, setForgotSuccess] = useState(false)
 
   // 登录表单
   const [loginForm, setLoginForm] = useState({
@@ -246,6 +252,50 @@ function LoginContent() {
       return
     }
     alert("验证码已发送：123456")
+  }
+
+  // 发送忘记密码验证码
+  const sendForgotSmsCode = () => {
+    if (!forgotPhone) {
+      alert("请先输入手机号")
+      return
+    }
+    alert("验证码已发送：123456")
+  }
+
+  // 忘记密码处理
+  const handleForgotPassword = () => {
+    if (forgotStep === 1) {
+      if (!forgotPhone) {
+        alert("请输入手机号")
+        return
+      }
+      setForgotStep(2)
+    } else if (forgotStep === 2) {
+      if (!forgotSmsCode) {
+        alert("请输入验证码")
+        return
+      }
+      if (forgotSmsCode !== "123456") {
+        alert("验证码错误，请输入：123456")
+        return
+      }
+      setForgotStep(3)
+    } else if (forgotStep === 3) {
+      if (!forgotNewPassword || forgotNewPassword.length < 6) {
+        alert("密码长度至少6位")
+        return
+      }
+      setForgotSuccess(true)
+      setTimeout(() => {
+        setShowForgotPassword(false)
+        setForgotStep(1)
+        setForgotPhone("")
+        setForgotSmsCode("")
+        setForgotNewPassword("")
+        setForgotSuccess(false)
+      }, 2000)
+    }
   }
 
   return (
@@ -513,9 +563,13 @@ function LoginContent() {
                             />
                             <span className="ml-2 text-sm text-gray-600">记住账号</span>
                           </label>
-                          <Link href="#" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                          <button
+                            type="button"
+                            onClick={() => setShowForgotPassword(true)}
+                            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                          >
                             忘记密码？
-                          </Link>
+                          </button>
                         </div>
 
                         <button
@@ -726,6 +780,178 @@ function LoginContent() {
           © 2024-2026 测试网站-吴 · 版权所有 · 智能物流管理平台
         </div>
       </div>
+
+      {/* 忘记密码模态框 */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-300">
+            {/* 模态框头部 */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white">找回密码</h3>
+                <button
+                  onClick={() => {
+                    setShowForgotPassword(false)
+                    setForgotStep(1)
+                    setForgotPhone("")
+                    setForgotSmsCode("")
+                    setForgotNewPassword("")
+                    setForgotSuccess(false)
+                  }}
+                  className="text-white/80 hover:text-white transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+              {/* 步骤指示器 */}
+              <div className="flex items-center justify-center mt-4 space-x-2">
+                {[1, 2, 3].map((step) => (
+                  <div key={step} className="flex items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                      forgotStep >= step 
+                        ? 'bg-white text-blue-600' 
+                        : 'bg-white/30 text-white'
+                    }`}>
+                      {forgotStep > step ? <CheckCircle className="h-5 w-5" /> : step}
+                    </div>
+                    {step < 3 && (
+                      <div className={`w-12 h-1 mx-1 rounded transition-all ${
+                        forgotStep > step ? 'bg-white' : 'bg-white/30'
+                      }`} />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-center mt-2 text-xs text-white/80 space-x-8">
+                <span>验证手机</span>
+                <span>输入验证码</span>
+                <span>设置密码</span>
+              </div>
+            </div>
+
+            {/* 模态框内容 */}
+            <div className="p-6">
+              {forgotSuccess ? (
+                <div className="text-center py-8">
+                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <h4 className="text-xl font-bold text-gray-900 mb-2">密码重置成功！</h4>
+                  <p className="text-gray-500">请使用新密码登录</p>
+                </div>
+              ) : (
+                <>
+                  {/* 步骤1：输入手机号 */}
+                  {forgotStep === 1 && (
+                    <div className="space-y-4">
+                      <div className="text-center mb-6">
+                        <Phone className="h-12 w-12 text-blue-500 mx-auto mb-3" />
+                        <p className="text-gray-600">请输入您注册时使用的手机号</p>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Phone className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          type="tel"
+                          value={forgotPhone}
+                          onChange={(e) => setForgotPhone(e.target.value)}
+                          className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-gray-50/50 focus:bg-white text-lg"
+                          placeholder="请输入手机号"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 步骤2：输入验证码 */}
+                  {forgotStep === 2 && (
+                    <div className="space-y-4">
+                      <div className="text-center mb-6">
+                        <Shield className="h-12 w-12 text-blue-500 mx-auto mb-3" />
+                        <p className="text-gray-600">验证码已发送至 {forgotPhone}</p>
+                        <p className="text-sm text-gray-400 mt-1">测试验证码：123456</p>
+                      </div>
+                      <div className="flex gap-3">
+                        <input
+                          type="text"
+                          value={forgotSmsCode}
+                          onChange={(e) => setForgotSmsCode(e.target.value)}
+                          className="flex-1 px-4 py-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-gray-50/50 focus:bg-white text-lg text-center tracking-widest"
+                          placeholder="请输入验证码"
+                          maxLength={6}
+                        />
+                        <button
+                          type="button"
+                          onClick={sendForgotSmsCode}
+                          className="px-4 py-4 bg-blue-100 text-blue-600 rounded-xl font-medium hover:bg-blue-200 transition-colors whitespace-nowrap"
+                        >
+                          重新发送
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 步骤3：设置新密码 */}
+                  {forgotStep === 3 && (
+                    <div className="space-y-4">
+                      <div className="text-center mb-6">
+                        <Lock className="h-12 w-12 text-blue-500 mx-auto mb-3" />
+                        <p className="text-gray-600">请设置您的新密码</p>
+                      </div>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                          <Lock className="h-5 w-5 text-gray-400" />
+                        </div>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={forgotNewPassword}
+                          onChange={(e) => setForgotNewPassword(e.target.value)}
+                          className="w-full pl-12 pr-12 py-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-gray-50/50 focus:bg-white text-lg"
+                          placeholder="请输入新密码（至少6位）"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                          ) : (
+                            <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 按钮区域 */}
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (forgotStep === 1) {
+                          setShowForgotPassword(false)
+                          setForgotPhone("")
+                        } else {
+                          setForgotStep(forgotStep - 1)
+                        }
+                      }}
+                      className="flex-1 py-3 border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      {forgotStep === 1 ? '取消' : '上一步'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg"
+                    >
+                      {forgotStep === 3 ? '确认重置' : '下一步'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes loading {
