@@ -148,9 +148,9 @@ function LoginContent() {
         localStorage.setItem("user_info", JSON.stringify({
           id: "admin_" + Date.now(),
           name: adminUser.name,
-          company: "智运物流",
-          phone: "138****8888",
-          email: `${adminUser.username}@smartlogistics.com`,
+          company: "测试网站-吴",
+          phone: "15024544589",
+          email: `${adminUser.username}@testwu.com`,
           role: adminUser.role,
           isAdmin: true
         }))
@@ -723,7 +723,7 @@ function LoginContent() {
 
         {/* Copyright */}
         <div className="text-center mt-6 text-xs text-white/40">
-          © 2024-2026 智运物流 · 版权所有 · 科技感智能物流平台
+          © 2024-2026 测试网站-吴 · 版权所有 · 智能物流管理平台
         </div>
       </div>
 

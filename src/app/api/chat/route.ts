@@ -104,14 +104,14 @@ function getLocalResponse(message: string): string {
 📦 零担配送：按重量/体积计算
 
 如需准确报价，请联系：
-📞 客服热线：400-888-8888
-📧 邮箱：service@smartlogistics.com
+📞 客服热线：15024544589
+📧 邮箱：service@testwu.com
 
 请告诉我您的货物信息和起止地点，我可以帮您估算运费。`
   }
 
   if (lowerMessage.includes("范围") || lowerMessage.includes("城市") || lowerMessage.includes("配送")) {
-    return `智运物流服务范围：
+    return `测试网站-吴服务范围：
 
 🌍 覆盖全国 50+ 城市
 🏢 合作企业 10000+ 家
@@ -127,9 +127,9 @@ function getLocalResponse(message: string): string {
 
 如需投诉或建议，您可以通过以下方式联系我们：
 
-📞 客服热线：400-888-8888（24小时）
-📧 邮箱：service@smartlogistics.com
-📍 地址：北京市朝阳区物流大道1号
+📞 客服热线：15024544589（24小时）
+📧 邮箱：service@testwu.com
+📍 地址：中国
 
 我们会认真处理您的每一条反馈。`
   }
@@ -150,14 +150,14 @@ function getLocalResponse(message: string): string {
   if (lowerMessage.includes("联系") || lowerMessage.includes("电话") || lowerMessage.includes("客服")) {
     return `联系方式：
 
-📞 客服热线：400-888-8888（24小时服务）
-📧 邮箱：service@smartlogistics.com
-📍 地址：北京市朝阳区物流大道1号
+📞 客服热线：15024544589（24小时服务）
+📧 邮箱：service@testwu.com
+📍 地址：中国
 
 如需紧急帮助，建议直接拨打客服热线。`
   }
 
-  return `您好！我是智运物流智能客服。
+  return `您好！我是测试网站-吴智能客服。
 
 我可以帮您解答以下问题：
 • 物流查询

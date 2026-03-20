@@ -97,9 +97,9 @@ export default function AdminLoginPage() {
         localStorage.setItem("user_info", JSON.stringify({
           id: "admin_" + Date.now(),
           name: user.name,
-          company: "智运物流管理系统",
-          phone: "138****8888",
-          email: `${user.username}@smartlogistics.com`,
+          company: "测试网站-吴",
+          phone: "15024544589",
+          email: `${user.username}@testwu.com`,
           role: user.role,
           isAdmin: true,
           avatar: user.avatar
@@ -375,7 +375,7 @@ export default function AdminLoginPage() {
           </div>
 
           <div className="text-center mt-6 text-xs text-slate-600">
-            © 2024-2026 智运物流管理系统 · 版本 v3.0.1
+            © 2024-2026 测试网站-吴 · 版本 v3.0.1
           </div>
         </div>
       </div>

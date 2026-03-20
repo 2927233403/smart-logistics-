@@ -13,7 +13,7 @@ export function Footer() {
             <div className="flex items-center space-x-2 mb-4">
               <Truck className="h-8 w-8 text-blue-500" />
               <span className="text-xl font-bold text-white bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent">
-                SmartLogistics
+                测试网站-吴
               </span>
               <span className="text-xs font-medium text-gray-400 ml-2 px-2 py-0.5 bg-gray-800 rounded-full border border-gray-700">
                 AI智能版
@@ -25,15 +25,15 @@ export function Footer() {
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-sm">
                 <Phone className="h-4 w-4" />
-                <span>400-888-8888</span>
+                <span>15024544589</span>
               </div>
               <div className="flex items-center space-x-2 text-sm">
                 <Mail className="h-4 w-4" />
-                <span>service@smartlogistics.com</span>
+                <span>service@testwu.com</span>
               </div>
               <div className="flex items-center space-x-2 text-sm">
                 <MapPin className="h-4 w-4" />
-                <span>北京市朝阳区物流大道1号</span>
+                <span>中国</span>
               </div>
             </div>
           </div>
