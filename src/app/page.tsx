@@ -102,11 +102,9 @@ export default function Home() {
   const router = useRouter()
   const [trackingNo, setTrackingNo] = useState("")
   const [currentTheme, setCurrentTheme] = useState<Theme>("blue")
-  const [mounted, setMounted] = useState(false)
   const [showContactModal, setShowContactModal] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
     // 从localStorage读取保存的主题
     const savedTheme = localStorage.getItem("home_theme") as Theme
     if (savedTheme && themes[savedTheme]) {
@@ -167,10 +165,6 @@ export default function Home() {
     { value: "99.8%", label: "准时率" },
     { value: "24/7", label: "客服支持" },
   ]
-
-  if (!mounted) {
-    return null
-  }
 
   return (
     <div className={`min-h-screen flex flex-col transition-all duration-700 ${isDark ? 'bg-slate-950' : 'bg-white'}`}>
