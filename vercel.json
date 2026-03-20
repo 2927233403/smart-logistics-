@@ -1,7 +1,9 @@
 {
   "version": 2,
-  "name": "smart-logistics",
-  "framework": "nextjs",
-  "buildCommand": "next build",
-  "outputDirectory": ".next"
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ]
 }
