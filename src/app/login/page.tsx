@@ -538,26 +538,7 @@ function LoginContent() {
                       </>
                     )}
 
-                    {/* 快速登录演示 */}
-                    <div className="pt-4 border-t border-gray-100">
-                      <p className="text-xs text-gray-400 text-center mb-3">快速登录演示账号</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          { name: "管理员", user: "admin", pass: "admin123", color: "blue" },
-                          { name: "操作员", user: "operator", pass: "123456", color: "purple" },
-                          { name: "普通用户", user: "user", pass: "123456", color: "green" },
-                        ].map((demo) => (
-                          <button
-                            key={demo.user}
-                            type="button"
-                            onClick={() => setLoginForm({ ...loginForm, account: demo.user, password: demo.pass })}
-                            className={`px-3 py-2 bg-${demo.color}-50 text-${demo.color}-600 rounded-lg hover:bg-${demo.color}-100 transition-colors text-xs font-medium`}
-                          >
-                            {demo.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+
                   </form>
                 )}
 

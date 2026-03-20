@@ -351,23 +351,7 @@ export default function AdminLoginPage() {
                   </button>
                 </form>
 
-                {/* Demo Accounts */}
-                <div className="mt-6 pt-6 border-t border-slate-800">
-                  <p className="text-xs text-slate-500 text-center mb-3">快速登录演示账号</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {users.map((user) => (
-                      <button
-                        key={user.username}
-                        type="button"
-                        onClick={() => fillDemoAccount(user.username, user.password)}
-                        className="flex flex-col items-center gap-1 px-3 py-3 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-blue-500/50 rounded-xl transition-all group"
-                      >
-                        <span className="text-2xl group-hover:scale-110 transition-transform">{user.avatar}</span>
-                        <span className="text-xs text-slate-400 group-hover:text-slate-200">{user.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+
               </>
             )}
           </div>
