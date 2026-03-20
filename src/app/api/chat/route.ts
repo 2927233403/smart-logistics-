@@ -17,7 +17,7 @@ async function callQwenAPI(messages: ChatMessage[]): Promise<string> {
   }
 
   const response = await fetch(
-    "https://dashscope.aliyuncshttps://dashscope.console.aliyun.com.com/api/v1/services/aigc/text-generation/generation",
+    "https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation",
     {
       method: "POST",
       headers: {
