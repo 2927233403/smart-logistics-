@@ -134,12 +134,48 @@ function LoginContent() {
 
     setTimeout(() => {
       const account = loginForm.account
-      const password = loginMethod === "password" ? loginForm.password : "123456"
+      
+      // 短信登录验证
+      if (loginMethod === "sms") {
+        if (!loginForm.phone) {
+          setError("请输入手机号")
+          setIsLoading(false)
+          return
+        }
+        if (!loginForm.smsCode) {
+          setError("请输入验证码")
+          setIsLoading(false)
+          return
+        }
+        if (loginForm.smsCode !== smsCodeStore) {
+          setError("验证码错误")
+          setIsLoading(false)
+          return
+        }
+        // 短信登录成功
+        localStorage.setItem("user_logged_in", "true")
+        localStorage.setItem("user_info", JSON.stringify({
+          id: "user_" + Date.now(),
+          name: loginForm.phone,
+          company: "测试网站-吴",
+          phone: loginForm.phone,
+          email: "",
+          role: "user"
+        }))
+        setSuccess(true)
+        setTimeout(() => {
+          router.push("/user/profile")
+        }, 1000)
+        setIsLoading(false)
+        return
+      }
+
+      const password = loginForm.password
 
       // 检查是否是后台管理员账号
       const adminUsers = [
         { username: "admin", password: "admin123", name: "管理员", role: "admin" },
-        { username: "operator", password: "123456", name: "操作员", role: "operator" },
+        { username: "operator", password: "operator123", name: "操作员", role: "operator" },
       ]
 
       const adminUser = adminUsers.find(
@@ -245,13 +281,24 @@ function LoginContent() {
     }, 2000)
   }
 
+  // 生成随机验证码
+  const generateSmsCode = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString()
+  }
+
+  // 存储验证码（实际项目中应该存储在后端）
+  const [smsCodeStore, setSmsCodeStore] = useState<string>("")
+  const [forgotSmsCodeStore, setForgotSmsCodeStore] = useState<string>("")
+
   // 发送验证码
   const sendSmsCode = () => {
     if (!loginForm.phone) {
       setError("请先输入手机号")
       return
     }
-    alert("验证码已发送：123456")
+    const code = generateSmsCode()
+    setSmsCodeStore(code)
+    alert(`验证码已发送至 ${loginForm.phone}：${code}`)
   }
 
   // 发送忘记密码验证码
@@ -260,7 +307,9 @@ function LoginContent() {
       alert("请先输入手机号")
       return
     }
-    alert("验证码已发送：123456")
+    const code = generateSmsCode()
+    setForgotSmsCodeStore(code)
+    alert(`验证码已发送至 ${forgotPhone}：${code}`)
   }
 
   // 忘记密码处理
@@ -276,8 +325,8 @@ function LoginContent() {
         alert("请输入验证码")
         return
       }
-      if (forgotSmsCode !== "123456") {
-        alert("验证码错误，请输入：123456")
+      if (forgotSmsCode !== forgotSmsCodeStore) {
+        alert("验证码错误，请重新输入")
         return
       }
       setForgotStep(3)
@@ -867,7 +916,6 @@ function LoginContent() {
                       <div className="text-center mb-6">
                         <Shield className="h-12 w-12 text-blue-500 mx-auto mb-3" />
                         <p className="text-gray-600">验证码已发送至 {forgotPhone}</p>
-                        <p className="text-sm text-gray-400 mt-1">测试验证码：123456</p>
                       </div>
                       <div className="flex gap-3">
                         <input
