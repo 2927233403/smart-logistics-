@@ -1,92 +1,22 @@
 "use client"
 
-import { useState } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { WarehouseSidebar } from "@/components/warehouse-sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Package,
   Truck,
-  Search,
-  BarChart2,
-  Upload,
   Boxes,
   Scan,
+  Search,
   Layers,
-  Activity,
-  Settings,
-  Users,
-  FileText
+  Activity
 } from "lucide-react"
 import Link from "next/link"
 
 export default function Warehouse() {
-  const [activeTab, setActiveTab] = useState("dashboard")
-
-  const menuItems = [
-    {
-      id: "dashboard",
-      label: "仓库概览",
-      icon: BarChart2,
-      href: "/warehouse"
-    },
-    {
-      id: "inbound",
-      label: "入库管理",
-      icon: Package,
-      href: "/warehouse/inbound"
-    },
-    {
-      id: "outbound",
-      label: "出库管理",
-      icon: Truck,
-      href: "/warehouse/outbound"
-    },
-    {
-      id: "scan",
-      label: "过机端口",
-      icon: Scan,
-      href: "/warehouse/scan"
-    },
-    {
-      id: "shelf",
-      label: "上架管理",
-      icon: Layers,
-      href: "/warehouse/shelf"
-    },
-    {
-      id: "search",
-      label: "库存查询",
-      icon: Search,
-      href: "/warehouse/search"
-    },
-    {
-      id: "upload",
-      label: "照片上传",
-      icon: Upload,
-      href: "/warehouse/upload"
-    },
-    {
-      id: "logs",
-      label: "操作日志",
-      icon: Activity,
-      href: "/warehouse/logs"
-    },
-    {
-      id: "users",
-      label: "用户管理",
-      icon: Users,
-      href: "/warehouse/users"
-    },
-    {
-      id: "settings",
-      label: "系统设置",
-      icon: Settings,
-      href: "/warehouse/settings"
-    }
-  ]
-
   const stats = [
     { label: "总库存", value: "12,458", icon: Boxes, color: "bg-blue-500" },
     { label: "今日入库", value: "156", icon: Package, color: "bg-green-500" },
@@ -102,39 +32,7 @@ export default function Warehouse() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* 侧边栏 */}
           <div className="lg:w-64">
-            <Card className="h-full">
-              <CardContent className="p-0">
-                <div className="p-6 border-b border-slate-200">
-                  <h2 className="text-xl font-bold text-slate-900 flex items-center">
-                    <Boxes className="mr-2 h-6 w-6 text-blue-600" />
-                    仓储管理
-                  </h2>
-                </div>
-                <div className="p-4">
-                  {menuItems.map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <Link key={item.id} href={item.href}>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault()
-                            setActiveTab(item.id)
-                          }}
-                          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 mb-2 ${
-                              activeTab === item.id
-                                ? 'bg-blue-50 text-blue-600 font-medium'
-                                : 'text-slate-700 hover:bg-slate-100'
-                            }`}
-                        >
-                          <Icon className="h-5 w-5" />
-                          <span>{item.label}</span>
-                        </button>
-                      </Link>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+            <WarehouseSidebar />
           </div>
           
           {/* 主内容区 */}

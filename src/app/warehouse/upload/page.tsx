@@ -1,23 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { WarehouseSidebar } from "@/components/warehouse-sidebar"
+import { useAudioManager } from "@/components/audio-manager"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
   Upload as UploadIcon,
-  Package,
-  BarChart2,
-  Search,
   Image as ImageIcon,
   Check,
-  X
+  X,
+  AlertCircle,
+  Loader2
 } from "lucide-react"
-import Link from "next/link"
 
 export default function UploadPage() {
+  const { playSound } = useAudioManager()
   const [images, setImages] = useState<File[]>([])
   const [previewImages, setPreviewImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
@@ -27,14 +27,43 @@ export default function UploadPage() {
     url: string
     time: string
   }[]>([])
+  const [error, setError] = useState<string>('')
+  const dropZoneRef = useRef<HTMLDivElement>(null)
+
+  // 验证文件
+  const validateFile = (file: File): string | null => {
+    // 验证文件类型
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png']
+    if (!allowedTypes.includes(file.type)) {
+      return '只支持 JPG、PNG、JPEG 格式的图片'
+    }
+
+    // 验证文件大小（10MB）
+    const maxSize = 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      return '文件大小不能超过 10MB'
+    }
+
+    return null
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files)
-      setImages(prev => [...prev, ...files])
-      
-      // 生成预览
+      let hasError = false
+
       files.forEach(file => {
+        const errorMsg = validateFile(file)
+        if (errorMsg) {
+          setError(errorMsg)
+          hasError = true
+          return
+        }
+
+        // 添加到状态
+        setImages(prev => [...prev, file])
+        
+        // 生成预览
         const reader = new FileReader()
         reader.onload = (event) => {
           const result = event.target?.result
@@ -44,6 +73,65 @@ export default function UploadPage() {
         }
         reader.readAsDataURL(file)
       })
+
+      if (hasError) {
+        // 3秒后清除错误
+        setTimeout(() => setError(''), 3000)
+      }
+    }
+  }
+
+  // 拖放功能
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    if (dropZoneRef.current) {
+      dropZoneRef.current.classList.add('border-indigo-500')
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    if (dropZoneRef.current) {
+      dropZoneRef.current.classList.remove('border-indigo-500')
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    if (dropZoneRef.current) {
+      dropZoneRef.current.classList.remove('border-indigo-500')
+    }
+
+    if (e.dataTransfer.files) {
+      const files = Array.from(e.dataTransfer.files)
+      let hasError = false
+
+      files.forEach(file => {
+        const errorMsg = validateFile(file)
+        if (errorMsg) {
+          setError(errorMsg)
+          hasError = true
+          return
+        }
+
+        // 添加到状态
+        setImages(prev => [...prev, file])
+        
+        // 生成预览
+        const reader = new FileReader()
+        reader.onload = (event) => {
+          const result = event.target?.result
+          if (result) {
+            setPreviewImages(prev => [...prev, result as string])
+          }
+        }
+        reader.readAsDataURL(file)
+      })
+
+      if (hasError) {
+        // 3秒后清除错误
+        setTimeout(() => setError(''), 3000)
+      }
     }
   }
 
@@ -51,6 +139,8 @@ export default function UploadPage() {
     if (images.length === 0) return
     
     setUploading(true)
+    setError('')
+    playSound('upload')
     
     // 模拟上传过程
     setTimeout(() => {
@@ -65,6 +155,7 @@ export default function UploadPage() {
       setImages([])
       setPreviewImages([])
       setUploading(false)
+      playSound('success')
     }, 1500)
   }
 
@@ -85,40 +176,7 @@ export default function UploadPage() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* 侧边栏 */}
           <div className="lg:w-64">
-            <Card className="h-full">
-              <CardContent className="p-0">
-                <div className="p-6 border-b border-slate-200">
-                  <h2 className="text-xl font-bold text-slate-900 flex items-center">
-                    <UploadIcon className="mr-2 h-6 w-6 text-indigo-600" />
-                    照片上传
-                  </h2>
-                </div>
-                <div className="p-4">
-                  <Link href="/warehouse">
-                    <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 mb-2 text-slate-700 hover:bg-slate-100">
-                      <BarChart2 className="h-5 w-5" />
-                      <span>仓库概览</span>
-                    </button>
-                  </Link>
-                  <Link href="/warehouse/inbound">
-                    <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 mb-2 text-slate-700 hover:bg-slate-100">
-                      <Package className="h-5 w-5" />
-                      <span>入库管理</span>
-                    </button>
-                  </Link>
-                  <Link href="/warehouse/search">
-                    <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 mb-2 text-slate-700 hover:bg-slate-100">
-                      <Search className="h-5 w-5" />
-                      <span>库存查询</span>
-                    </button>
-                  </Link>
-                  <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 mb-2 bg-indigo-50 text-indigo-600 font-medium">
-                    <UploadIcon className="h-5 w-5" />
-                    <span>照片上传</span>
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+            <WarehouseSidebar title="照片上传" icon={UploadIcon} />
           </div>
           
           {/* 主内容区 */}
@@ -127,8 +185,22 @@ export default function UploadPage() {
               <CardContent className="p-6">
                 <h3 className="text-xl font-semibold text-slate-900 mb-6">上传照片</h3>
                 
+                {/* 错误提示 */}
+                {error && (
+                  <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-500" />
+                    <span className="text-red-600 text-sm">{error}</span>
+                  </div>
+                )}
+                
                 {/* 上传区域 */}
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center mb-6">
+                <div 
+                  ref={dropZoneRef}
+                  className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center mb-6 transition-colors"
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <UploadIcon className="h-16 w-16 text-slate-400 mx-auto mb-4" />
                   <h4 className="text-lg font-medium text-slate-900 mb-2">拖放文件到此处或点击上传</h4>
                   <p className="text-slate-500 mb-4">支持 JPG、PNG、JPEG 格式，单文件最大 10MB</p>
@@ -159,7 +231,7 @@ export default function UploadPage() {
                           </div>
                           <button 
                             onClick={() => handleRemoveImage(index)}
-                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white"
+                            className="absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
                           >
                             <X className="h-3 w-3" />
                           </button>
@@ -172,7 +244,14 @@ export default function UploadPage() {
                         disabled={uploading}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white"
                       >
-                        {uploading ? '上传中...' : '开始上传'}
+                        {uploading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            上传中...
+                          </>
+                        ) : (
+                          '开始上传'
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -202,7 +281,7 @@ export default function UploadPage() {
                         </div>
                         <button 
                           onClick={() => handleRemoveUploaded(image.id)}
-                          className="absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white"
+                          className="absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
                         >
                           <X className="h-3 w-3" />
                         </button>
