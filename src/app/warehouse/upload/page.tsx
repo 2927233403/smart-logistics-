@@ -315,6 +315,7 @@ export default function UploadPage() {
                   <input 
                     ref={folderInputRef}
                     type="file" 
+                    // @ts-ignore - webkitdirectory is a non-standard attribute for folder selection
                     webkitdirectory=""
                     directory=""
                     multiple 
