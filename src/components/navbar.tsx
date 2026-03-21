@@ -97,7 +97,7 @@ export function Navbar() {
     window.location.href = "/"
   }
 
-  const handleSearch = (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (searchQuery.trim()) {
       // 这里可以实现搜索功能

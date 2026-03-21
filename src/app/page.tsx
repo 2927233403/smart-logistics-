@@ -216,7 +216,7 @@ export default function Home() {
             </p>
             
             {/* Tracking Search */}
-            <Card className={`${theme.cardBg} backdrop-blur-xl border-white/20 transition-all duration-500 animate-in fade-in slide-in-from-bottom duration-700 delay-300`}>
+            <Card className={`${theme.cardBg} backdrop-blur-xl border-white/20 transition-all animate-in fade-in slide-in-from-bottom duration-700 delay-300`}>
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 relative">
