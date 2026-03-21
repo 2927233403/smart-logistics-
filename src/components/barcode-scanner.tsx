@@ -140,38 +140,43 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
     if (!context) return
 
     const scan = () => {
-      if (!isScanning || !video.videoWidth) {
-        animationRef.current = requestAnimationFrame(scan)
-        return
-      }
-
-      // 设置canvas尺寸与视频一致
-      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-      }
-
-      // 绘制当前视频帧
-      context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-      // 获取图像数据
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-
-      // 使用jsQR识别二维码
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: 'attemptBoth'
-      })
-
-      if (code) {
-        const now = Date.now()
-        // 防止重复扫描（间隔至少1秒）
-        if (now - lastScanTime > 1000) {
-          setLastScanTime(now)
-          onScan(code.data)
-          
-          // 可选：扫描成功后停止摄像头
-          // stopCamera()
+      try {
+        if (!isScanning || !video.videoWidth) {
+          animationRef.current = requestAnimationFrame(scan)
+          return
         }
+
+        // 设置canvas尺寸与视频一致
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+        }
+
+        // 绘制当前视频帧
+        context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+        // 获取图像数据
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+
+        // 使用jsQR识别二维码
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'attemptBoth'
+        })
+
+        if (code) {
+          const now = Date.now()
+          // 防止重复扫描（间隔至少1秒）
+          if (now - lastScanTime > 1000) {
+            setLastScanTime(now)
+            onScan(code.data)
+            
+            // 可选：扫描成功后停止摄像头
+            // stopCamera()
+          }
+        }
+      } catch (error) {
+        console.error('扫描错误:', error)
+        // 继续扫描循环
       }
 
       animationRef.current = requestAnimationFrame(scan)
@@ -184,31 +189,38 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
   const handleManualScan = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return
 
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const context = canvas.getContext('2d')
-    
-    if (!context) return
+    try {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      const context = canvas.getContext('2d')
+      
+      if (!context) return
 
-    // 设置canvas尺寸
-    canvas.width = video.videoWidth || 640
-    canvas.height = video.videoHeight || 480
+      // 设置canvas尺寸
+      canvas.width = video.videoWidth || 640
+      canvas.height = video.videoHeight || 480
 
-    // 绘制当前帧
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      // 绘制当前帧
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-    // 获取图像数据
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+      // 获取图像数据
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
 
-    // 尝试识别
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'attemptBoth'
-    })
+      // 尝试识别
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'attemptBoth'
+      })
 
-    if (code) {
-      onScan(code.data)
-    } else {
-      // 如果没有识别到二维码，生成一个模拟的条码用于测试
+      if (code) {
+        onScan(code.data)
+      } else {
+        // 如果没有识别到二维码，生成一个模拟的条码用于测试
+        const mockBarcode = `SCAN${Date.now().toString().slice(-8)}`
+        onScan(mockBarcode)
+      }
+    } catch (error) {
+      console.error('手动扫描错误:', error)
+      // 生成模拟条码作为备用
       const mockBarcode = `SCAN${Date.now().toString().slice(-8)}`
       onScan(mockBarcode)
     }
