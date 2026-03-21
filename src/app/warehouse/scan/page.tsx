@@ -49,7 +49,7 @@ export default function ScanPage() {
       const historyItem = {
         sku: scanInput.trim(),
         type: scanMode,
-        status: success ? 'success' : 'error',
+        status: (success ? 'success' : 'error') as 'success' | 'error',
         message: success ? '扫码成功' : '商品不存在',
         time: new Date().toLocaleTimeString()
       }

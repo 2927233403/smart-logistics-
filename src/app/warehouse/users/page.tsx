@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
-  Users,
+  Users as UsersIcon,
   Package,
   BarChart2,
   Search,
@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-export default function Users() {
+export default function UsersPage() {
   const [users, setUsers] = useState([
     { id: 1, name: "管理员", role: "管理员", email: "admin@example.com", status: "active", lastLogin: "2026-03-21 10:00:00" },
     { id: 2, name: "操作员1", role: "操作员", email: "operator1@example.com", status: "active", lastLogin: "2026-03-21 09:30:00" },
@@ -59,7 +59,7 @@ export default function Users() {
               <CardContent className="p-0">
                 <div className="p-6 border-b border-slate-200">
                   <h2 className="text-xl font-bold text-slate-900 flex items-center">
-                    <Users className="mr-2 h-6 w-6 text-blue-600" />
+                    <UsersIcon className="mr-2 h-6 w-6 text-blue-600" />
                     用户管理
                   </h2>
                 </div>
@@ -83,7 +83,7 @@ export default function Users() {
                     </button>
                   </Link>
                   <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 mb-2 bg-blue-50 text-blue-600 font-medium">
-                    <Users className="h-5 w-5" />
+                    <UsersIcon className="h-5 w-5" />
                     <span>用户管理</span>
                   </button>
                 </div>

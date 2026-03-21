@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
-  Search,
+  Search as SearchIcon,
   Package,
   BarChart2,
   Layers,
@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-export default function Search() {
+export default function SearchPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
@@ -56,7 +56,7 @@ export default function Search() {
               <CardContent className="p-0">
                 <div className="p-6 border-b border-slate-200">
                   <h2 className="text-xl font-bold text-slate-900 flex items-center">
-                    <Search className="mr-2 h-6 w-6 text-green-600" />
+                    <SearchIcon className="mr-2 h-6 w-6 text-green-600" />
                     库存查询
                   </h2>
                 </div>
@@ -80,7 +80,7 @@ export default function Search() {
                     </button>
                   </Link>
                   <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 mb-2 bg-green-50 text-green-600 font-medium">
-                    <Search className="h-5 w-5" />
+                    <SearchIcon className="h-5 w-5" />
                     <span>库存查询</span>
                   </button>
                 </div>
@@ -95,7 +95,7 @@ export default function Search() {
                 <div className="flex flex-col md:flex-row gap-4 mb-6">
                   <div className="flex-1">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                      <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <Input 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -126,7 +126,7 @@ export default function Search() {
                       <option value="location">按库位</option>
                     </select>
                     <Button onClick={handleSearch} className="bg-green-600 hover:bg-green-700 text-white">
-                      <Search className="h-4 w-4 mr-2" />
+                      <SearchIcon className="h-4 w-4 mr-2" />
                       搜索
                     </Button>
                   </div>

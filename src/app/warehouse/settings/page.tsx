@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  Settings,
+  Settings as SettingsIcon,
   Package,
   BarChart2,
   Search,
@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-export default function Settings() {
+export default function SettingsPage() {
   const [settings, setSettings] = useState({
     warehouseName: "智能仓储中心",
     warehouseAddress: "上海市浦东新区张江高科技园区",
@@ -63,7 +63,7 @@ export default function Settings() {
               <CardContent className="p-0">
                 <div className="p-6 border-b border-slate-200">
                   <h2 className="text-xl font-bold text-slate-900 flex items-center">
-                    <Settings className="mr-2 h-6 w-6 text-gray-600" />
+                    <SettingsIcon className="mr-2 h-6 w-6 text-gray-600" />
                     系统设置
                   </h2>
                 </div>
@@ -87,7 +87,7 @@ export default function Settings() {
                     </button>
                   </Link>
                   <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 mb-2 bg-gray-50 text-gray-600 font-medium">
-                    <Settings className="h-5 w-5" />
+                    <SettingsIcon className="h-5 w-5" />
                     <span>系统设置</span>
                   </button>
                 </div>

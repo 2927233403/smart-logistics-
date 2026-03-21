@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import {
-  Upload,
+  Upload as UploadIcon,
   Package,
   BarChart2,
   Search,
@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-export default function Upload() {
+export default function UploadPage() {
   const [images, setImages] = useState<File[]>([])
   const [previewImages, setPreviewImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
@@ -37,8 +37,9 @@ export default function Upload() {
       files.forEach(file => {
         const reader = new FileReader()
         reader.onload = (event) => {
-          if (event.target?.result) {
-            setPreviewImages(prev => [...prev, event.target.result as string])
+          const result = event.target?.result
+          if (result) {
+            setPreviewImages(prev => [...prev, result as string])
           }
         }
         reader.readAsDataURL(file)
@@ -88,7 +89,7 @@ export default function Upload() {
               <CardContent className="p-0">
                 <div className="p-6 border-b border-slate-200">
                   <h2 className="text-xl font-bold text-slate-900 flex items-center">
-                    <Upload className="mr-2 h-6 w-6 text-indigo-600" />
+                    <UploadIcon className="mr-2 h-6 w-6 text-indigo-600" />
                     照片上传
                   </h2>
                 </div>
@@ -112,7 +113,7 @@ export default function Upload() {
                     </button>
                   </Link>
                   <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 mb-2 bg-indigo-50 text-indigo-600 font-medium">
-                    <Upload className="h-5 w-5" />
+                    <UploadIcon className="h-5 w-5" />
                     <span>照片上传</span>
                   </button>
                 </div>
@@ -128,7 +129,7 @@ export default function Upload() {
                 
                 {/* 上传区域 */}
                 <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center mb-6">
-                  <Upload className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+                  <UploadIcon className="h-16 w-16 text-slate-400 mx-auto mb-4" />
                   <h4 className="text-lg font-medium text-slate-900 mb-2">拖放文件到此处或点击上传</h4>
                   <p className="text-slate-500 mb-4">支持 JPG、PNG、JPEG 格式，单文件最大 10MB</p>
                   <input 
