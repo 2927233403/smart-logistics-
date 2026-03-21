@@ -208,15 +208,15 @@ export default function Home() {
         
         <div className="container mx-auto px-4 relative">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 animate-in fade-in slide-in-from-bottom duration-700">
               智能物流，<span className={`${isDark ? 'text-cyan-400' : 'text-blue-200'}`}>畅达天下</span>
             </h1>
-            <p className={`text-lg md:text-xl mb-8 ${isDark ? 'text-slate-300' : 'text-blue-100'}`}>
+            <p className={`text-lg md:text-xl mb-8 ${isDark ? 'text-slate-300' : 'text-blue-100'} animate-in fade-in slide-in-from-bottom duration-700 delay-150`}>
               专业的智能物流管理平台，为您提供高效、安全、便捷的物流解决方案
             </p>
             
             {/* Tracking Search */}
-            <Card className={`${theme.cardBg} backdrop-blur-xl border-white/20 transition-all duration-500`}>
+            <Card className={`${theme.cardBg} backdrop-blur-xl border-white/20 transition-all duration-500 animate-in fade-in slide-in-from-bottom duration-700 delay-300`}>
               <CardContent className="p-4">
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 relative">
@@ -226,13 +226,13 @@ export default function Home() {
                       value={trackingNo}
                       onChange={(e) => setTrackingNo(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                      className="pl-10 bg-white border-0 h-12 text-gray-900 placeholder:text-gray-500"
+                      className="pl-10 bg-white border-0 h-12 text-gray-900 placeholder:text-gray-500 focus:ring-2 focus:ring-cyan-500 transition-all"
                     />
                   </div>
                   <Button 
                     size="lg" 
                     onClick={handleSearch}
-                    className="h-12 px-8 bg-white text-gray-900 hover:bg-gray-100 shadow-lg"
+                    className="h-12 px-8 bg-white text-gray-900 hover:bg-gray-100 shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     查询
                   </Button>
@@ -240,9 +240,9 @@ export default function Home() {
               </CardContent>
             </Card>
             
-            <div className="flex flex-wrap justify-center gap-4 mt-8">
+            <div className="flex flex-wrap justify-center gap-4 mt-8 animate-in fade-in slide-in-from-bottom duration-700 delay-450">
               <Link href="/order">
-                <Button size="lg" className="bg-gradient-to-r from-cyan-400 to-blue-500 text-white hover:from-cyan-500 hover:to-blue-600 shadow-lg shadow-cyan-500/30 border-0">
+                <Button size="lg" className="bg-gradient-to-r from-cyan-400 to-blue-500 text-white hover:from-cyan-500 hover:to-blue-600 shadow-lg shadow-cyan-500/30 border-0 transition-all duration-300 hover:shadow-cyan-500/50 hover:-translate-y-0.5">
                   <Sparkles className="mr-2 h-5 w-5" />
                   智能下单
                 </Button>
