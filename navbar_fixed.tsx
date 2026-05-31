@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import Link from "next/link"
 import { useState, useEffect, useRef } from "react"
@@ -17,10 +17,10 @@ export function Navbar() {
   const [activeLink, setActiveLink] = useState("")
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [weather, setWeather] = useState({ temp: "--", condition: "sunny", city: "未知" })
+  const [weather, setWeather] = useState({ temp: "--", condition: "sunny", city: "鏈煡" })
   const [notifications] = useState([
-    { id: 1, message: "您的订单已发货", time: "10分钟前" },
-    { id: 2, message: "新的物流信息更新", time: "30分钟前" },
+    { id: 1, message: "鎮ㄧ殑璁㈠崟宸插彂璐?, time: "10鍒嗛挓鍓? },
+    { id: 2, message: "鏂扮殑鐗╂祦淇℃伅鏇存柊", time: "30鍒嗛挓鍓? },
   ])
   const [showNotifications, setShowNotifications] = useState(false)
   const [showCart, setShowCart] = useState(false)
@@ -33,30 +33,29 @@ export function Navbar() {
       const user = localStorage.getItem("user_info")
       if (loggedIn === "true" && user) {
         setIsLoggedIn(true)
-        setUserName(JSON.parse(user).name || "用户")
+        setUserName(JSON.parse(user).name || "鐢ㄦ埛")
       }
     }
     checkLoginStatus()
     window.addEventListener("storage", checkLoginStatus)
     
-    // 时钟更新
+    // 鏃堕挓鏇存柊
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     
-    // 滚动监听
+    // 婊氬姩鐩戝惉
     const handleScroll = () => {
       setScrolled(window.scrollY > 20)
     }
     window.addEventListener("scroll", handleScroll)
     
-    // 检测当前活动链接
-    const checkActiveLink = () => {
+    // 妫€娴嬪綋鍓嶆椿鍔ㄩ摼鎺?    const checkActiveLink = () => {
       const path = window.location.pathname
       setActiveLink(path)
     }
     checkActiveLink()
     window.addEventListener("popstate", checkActiveLink)
     
-    // 点击外部关闭下拉菜单
+    // 鐐瑰嚮澶栭儴鍏抽棴涓嬫媺鑿滃崟
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowSearch(false)
@@ -73,82 +72,12 @@ export function Navbar() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     
-    // 获取用户位置和天气
-    const getLocationAndWeather = async () => {
-      try {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              const { latitude, longitude } = position.coords
-              await fetchWeatherByCoords(latitude, longitude)
-            },
-            async (error) => {
-              console.log("无法获取位置，使用IP定位或默认位置", error)
-              await fetchWeatherByIP()
-            }
-          )
-        } else {
-          await fetchWeatherByIP()
-        }
-      } catch (error) {
-        console.log("获取天气失败，使用默认数据", error)
-        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
-      }
+    // 妯℃嫙澶╂皵鏁版嵁
+    const fetchWeather = () => {
+      // 杩欓噷鍙互鏇挎崲涓虹湡瀹炵殑澶╂皵API璋冪敤
+      setWeather({ temp: "25掳C", condition: "sunny", city: "涓婃捣" })
     }
-    
-    // 根据坐标获取天气
-    const fetchWeatherByCoords = async (lat: number, lon: number) => {
-      try {
-        const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-        const geoData = await geoResponse.json()
-        const cityName = geoData.address?.city || geoData.address?.town || geoData.address?.county || "未知"
-        
-        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`)
-        const weatherData = await weatherResponse.json()
-        
-        const temp = `${Math.round(weatherData.current.temperature_2m)}°C`
-        const condition = getConditionFromCode(weatherData.current.weather_code)
-        
-        setWeather({ temp, condition, city: cityName })
-      } catch (error) {
-        console.log("获取天气失败", error)
-        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
-      }
-    }
-    
-    // 根据IP获取天气（备用方案）
-    const fetchWeatherByIP = async () => {
-      try {
-        const ipResponse = await fetch('https://ipapi.co/json/')
-        const ipData = await ipResponse.json()
-        const cityName = ipData.city || "上海"
-        const lat = ipData.latitude || 31.2304
-        const lon = ipData.longitude || 121.4737
-        
-        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`)
-        const weatherData = await weatherResponse.json()
-        
-        const temp = `${Math.round(weatherData.current.temperature_2m)}°C`
-        const condition = getConditionFromCode(weatherData.current.weather_code)
-        
-        setWeather({ temp, condition, city: cityName })
-      } catch (error) {
-        console.log("IP定位获取天气失败", error)
-        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
-      }
-    }
-    
-    // 将天气代码转换为我们需要的状态
-    const getConditionFromCode = (code: number): string => {
-      if (code === 0) return 'sunny'
-      if (code >= 1 && code <= 3) return 'cloudy'
-      if (code >= 51 && code <= 67) return 'rainy'
-      if (code >= 71 && code <= 86) return 'snowy'
-      if (code >= 95) return 'rainy'
-      return 'sunny'
-    }
-    
-    getLocationAndWeather()
+    fetchWeather()
     
     return () => {
       window.removeEventListener("storage", checkLoginStatus)
@@ -170,17 +99,17 @@ export function Navbar() {
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (searchQuery.trim()) {
-      // 这里可以实现搜索功能
-      console.log('搜索:', searchQuery)
+      // 杩欓噷鍙互瀹炵幇鎼滅储鍔熻兘
+      console.log('鎼滅储:', searchQuery)
     }
   }
 
   const navLinks = [
-    { href: "/", label: "首页", icon: Zap },
-    { href: "/tracking", label: "物流追踪", icon: Activity },
-    { href: "/services", label: "服务介绍", icon: Globe },
-    { href: "/warehouse", label: "仓储管理", icon: Warehouse },
-    { href: "/admin", label: "管理后台", icon: Terminal },
+    { href: "/", label: "棣栭〉", icon: Zap },
+    { href: "/tracking", label: "鐗╂祦杩借釜", icon: Activity },
+    { href: "/services", label: "鏈嶅姟浠嬬粛", icon: Globe },
+    { href: "/warehouse", label: "浠撳偍绠＄悊", icon: Warehouse },
+    { href: "/admin", label: "绠＄悊鍚庡彴", icon: Terminal },
   ]
 
   const getWeatherIcon = (condition: string) => {
@@ -204,7 +133,7 @@ export function Navbar() {
         ? 'bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/50 shadow-lg shadow-blue-500/10' 
         : 'bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 border-b border-slate-700/30'
     }`}>
-      {/* 顶部装饰线 */}
+      {/* 椤堕儴瑁呴グ绾?*/}
       <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-blue-500 to-transparent animate-pulse"></div>
       
       <div className="container mx-auto px-4">
@@ -218,7 +147,7 @@ export function Navbar() {
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             </div>
             <div className="hidden sm:block">
-              <span className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-400 transition-colors duration-300">测试网站-吴</span>
+              <span className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-400 transition-colors duration-300">娴嬭瘯缃戠珯-鍚?/span>
               <span className="text-xs text-blue-400 block tracking-wider group-hover:text-cyan-400 transition-colors duration-300">SMART LOGISTICS</span>
             </div>
           </Link>
@@ -246,9 +175,9 @@ export function Navbar() {
             ))}
           </div>
           
-          {/* 智能功能区 */}
+          {/* 鏅鸿兘鍔熻兘鍖?*/}
           <div className="hidden lg:flex items-center space-x-4">
-            {/* 搜索按钮 */}
+            {/* 鎼滅储鎸夐挳 */}
             <div className="relative" ref={searchRef}>
               <button
                 onClick={() => setShowSearch(!showSearch)}
@@ -261,23 +190,23 @@ export function Navbar() {
                   <form onSubmit={handleSearch} className="flex items-center space-x-2">
                     <Input
                       type="text"
-                      placeholder="搜索订单、服务或路线..."
+                      placeholder="鎼滅储璁㈠崟銆佹湇鍔℃垨璺嚎..."
                       className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                     <Button type="submit" size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30 border-0">
-                      搜索
+                      鎼滅储
                     </Button>
                   </form>
                   <div className="mt-2 text-xs text-slate-500">
-                    热门搜索: 物流追踪, 国际快递, 仓储服务
+                    鐑棬鎼滅储: 鐗╂祦杩借釜, 鍥介檯蹇€? 浠撳偍鏈嶅姟
                   </div>
                 </div>
               )}
             </div>
             
-            {/* 天气信息 */}
+            {/* 澶╂皵淇℃伅 */}
             <div className="flex items-center space-x-2 text-sm text-slate-300 hover:text-white transition-colors duration-300">
               <MapPin className="h-4 w-4 text-blue-400" />
               <span>{weather.city}</span>
@@ -285,7 +214,7 @@ export function Navbar() {
               <span>{weather.temp}</span>
             </div>
             
-            {/* 购物车 */}
+            {/* 璐墿杞?*/}
             <div className="relative cart-container">
               <button
                 onClick={() => setShowCart(!showCart)}
@@ -300,28 +229,28 @@ export function Navbar() {
               </button>
               {showCart && (
                 <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 p-4 z-50 animate-slide-in-from-right">
-                  <h3 className="text-sm font-medium text-white mb-3">购物车</h3>
+                  <h3 className="text-sm font-medium text-white mb-3">璐墿杞?/h3>
                   {cartItems === 0 ? (
-                    <p className="text-slate-400 text-sm">购物车为空</p>
+                    <p className="text-slate-400 text-sm">璐墿杞︿负绌?/p>
                   ) : (
                     <div className="space-y-3">
-                      {/* 购物车项目 */}
+                      {/* 璐墿杞﹂」鐩?*/}
                       <div className="flex items-center justify-between pb-2 border-b border-slate-700/50">
-                        <span className="text-sm text-slate-300">标准物流服务</span>
-                        <span className="text-sm text-white">¥100.00</span>
+                        <span className="text-sm text-slate-300">鏍囧噯鐗╂祦鏈嶅姟</span>
+                        <span className="text-sm text-white">楼100.00</span>
                       </div>
                     </div>
                   )}
                   {cartItems > 0 && (
                     <Button className="w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30 border-0">
-                      结算
+                      缁撶畻
                     </Button>
                   )}
                 </div>
               )}
             </div>
             
-            {/* 通知 */}
+            {/* 閫氱煡 */}
             <div className="relative notification-container">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -336,7 +265,7 @@ export function Navbar() {
               </button>
               {showNotifications && (
                 <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 p-4 z-50 animate-slide-in-from-right">
-                  <h3 className="text-sm font-medium text-white mb-3">通知</h3>
+                  <h3 className="text-sm font-medium text-white mb-3">閫氱煡</h3>
                   <div className="space-y-3 max-h-64 overflow-y-auto">
                     {notifications.map((notification) => (
                       <div key={notification.id} className="p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-300">
@@ -346,20 +275,20 @@ export function Navbar() {
                     ))}
                   </div>
                   <Button variant="ghost" size="sm" className="w-full mt-3 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">
-                    查看全部
+                    鏌ョ湅鍏ㄩ儴
                   </Button>
                 </div>
               )}
             </div>
             
-            {/* 时间显示 */}
+            {/* 鏃堕棿鏄剧ず */}
             <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 hover:text-slate-400 transition-colors duration-300">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               <span>{currentTime.toLocaleTimeString('zh-CN')}</span>
             </div>
           </div>
 
-          {/* 用户菜单 */}
+          {/* 鐢ㄦ埛鑿滃崟 */}
           <div className="hidden md:flex items-center space-x-3 user-menu-container">
             {isLoggedIn ? (
               <div className="relative">
@@ -377,15 +306,15 @@ export function Navbar() {
                   <div className="absolute right-0 mt-2 w-56 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 py-2 z-50 animate-slide-in-from-right">
                     <Link href="/user/profile" className="flex items-center space-x-2 px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors">
                       <User className="h-4 w-4 text-blue-400" />
-                      <span>个人中心</span>
+                      <span>涓汉涓績</span>
                     </Link>
                     <Link href="/user/orders" className="flex items-center space-x-2 px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors">
                       <BarChart2 className="h-4 w-4 text-cyan-400" />
-                      <span>我的订单</span>
+                      <span>鎴戠殑璁㈠崟</span>
                     </Link>
                     <Link href="/user/profile" className="flex items-center space-x-2 px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors">
                       <Settings className="h-4 w-4 text-purple-400" />
-                      <span>账户设置</span>
+                      <span>璐︽埛璁剧疆</span>
                     </Link>
                     <hr className="my-2 border-slate-700/50" />
                     <button
@@ -393,7 +322,7 @@ export function Navbar() {
                       className="flex items-center space-x-2 px-4 py-3 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 w-full transition-colors"
                     >
                       <LogOut className="h-4 w-4" />
-                      <span>退出登录</span>
+                      <span>閫€鍑虹櫥褰?/span>
                     </button>
                   </div>
                 )}
@@ -402,12 +331,12 @@ export function Navbar() {
               <>
                 <Link href="/login">
                   <Button variant="ghost" size="sm" className="text-slate-300 hover:text-white hover:bg-slate-800/50 transform hover:translate-y-[-1px]">
-                    登录
+                    鐧诲綍
                   </Button>
                 </Link>
                 <Link href="/login?tab=register">
                   <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30 border-0 transform hover:translate-y-[-1px]">
-                    免费注册
+                    鍏嶈垂娉ㄥ唽
                   </Button>
                 </Link>
               </>
@@ -431,23 +360,23 @@ export function Navbar() {
         {isOpen && (
           <div className="md:hidden py-4 border-t border-slate-700/50 bg-slate-900/95 backdrop-blur-xl animate-fade-in">
             <div className="flex flex-col space-y-2">
-              {/* 移动搜索 */}
+              {/* 绉诲姩鎼滅储 */}
               <div className="px-4 py-2">
                 <form onSubmit={handleSearch} className="flex items-center space-x-2">
                   <Input
                     type="text"
-                    placeholder="搜索订单、服务或路线..."
+                    placeholder="鎼滅储璁㈠崟銆佹湇鍔℃垨璺嚎..."
                     className="flex-1 bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                   <Button type="submit" size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30 border-0">
-                    搜索
+                    鎼滅储
                   </Button>
                 </form>
               </div>
               
-              {/* 导航链接 */}
+              {/* 瀵艰埅閾炬帴 */}
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -466,7 +395,7 @@ export function Navbar() {
                 </Link>
               ))}
               
-              {/* 天气信息（移动端） */}
+              {/* 澶╂皵淇℃伅锛堢Щ鍔ㄧ锛?*/}
               <div className="flex items-center space-x-3 px-4 py-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
                 <MapPin className="h-5 w-5 text-blue-400" />
                 <span className="text-sm text-slate-300">{weather.city}</span>
@@ -474,7 +403,7 @@ export function Navbar() {
                 <span className="text-sm text-slate-300">{weather.temp}</span>
               </div>
               
-              {/* 用户区域 */}
+              {/* 鐢ㄦ埛鍖哄煙 */}
               <div className="flex flex-col space-y-3 pt-4 border-t border-slate-700/50">
                 {isLoggedIn ? (
                   <>
@@ -484,19 +413,19 @@ export function Navbar() {
                       </div>
                       <div>
                         <p className="font-medium text-white">{userName}</p>
-                        <p className="text-xs text-slate-400">已登录</p>
+                        <p className="text-xs text-slate-400">宸茬櫥褰?/p>
                       </div>
                     </div>
                     <Link href="/user/profile">
                       <Button variant="outline" size="sm" className="w-full justify-start border-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-800/50">
                         <User className="h-4 w-4 mr-2 text-blue-400" />
-                        个人中心
+                        涓汉涓績
                       </Button>
                     </Link>
                     <Link href="/user/orders">
                       <Button variant="outline" size="sm" className="w-full justify-start border-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-800/50">
                         <BarChart2 className="h-4 w-4 mr-2 text-cyan-400" />
-                        我的订单
+                        鎴戠殑璁㈠崟
                       </Button>
                     </Link>
                     <Button 
@@ -506,19 +435,18 @@ export function Navbar() {
                       onClick={handleLogout}
                     >
                       <LogOut className="h-4 w-4 mr-2" />
-                      退出登录
-                    </Button>
+                      閫€鍑虹櫥褰?                    </Button>
                   </>
                 ) : (
                   <>
                     <Link href="/login">
                       <Button variant="outline" size="sm" className="w-full border-slate-700/50 text-slate-300 hover:text-white hover:bg-slate-800/50">
-                        登录
+                        鐧诲綍
                       </Button>
                     </Link>
                     <Link href="/login?tab=register">
                       <Button size="sm" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30">
-                        免费注册
+                        鍏嶈垂娉ㄥ唽
                       </Button>
                     </Link>
                   </>
@@ -529,7 +457,7 @@ export function Navbar() {
         )}
       </div>
       
-      {/* 底部装饰线 */}
+      {/* 搴曢儴瑁呴グ绾?*/}
       <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-700/50 to-transparent"></div>
     </nav>
   )
