@@ -208,10 +208,12 @@ export function AIChat({ defaultOpen = false }: AIChatProps) {
                       message.role === "user" ? "text-blue-200" : "text-gray-400"
                     )}
                   >
-                    {message.timestamp.toLocaleTimeString("zh-CN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {typeof message.timestamp === "string" ?
+                      message.timestamp :
+                      message.timestamp.toLocaleTimeString("zh-CN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                   </p>
                 </div>
               </div>
