@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Menu, X, User, LogOut, Settings, ChevronDown, Zap, Activity, Globe, Terminal, Search, Sun, Cloud, CloudRain, Snowflake, MapPin, Bell, ShoppingCart, BarChart2, Warehouse } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,6 +28,175 @@ export function Navbar() {
   const [showCart, setShowCart] = useState(false)
   const [cartItems, setCartItems] = useState(0)
   const searchRef = useRef<HTMLDivElement>(null)
+
+  // 将天气代码转换为我们需要的状态
+  const getConditionFromCode = (code: number): string => {
+    if (code === 0) return 'sunny'
+    if (code >= 1 && code <= 3) return 'cloudy'
+    if (code >= 51 && code <= 67) return 'rainy'
+    if (code >= 71 && code <= 86) return 'snowy'
+    if (code >= 95) return 'rainy'
+    return 'sunny'
+  }
+
+  // 根据坐标获取天气
+  const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, defaultCity?: string) => {
+    try {
+      let cityName = defaultCity || "未知"
+      
+      // 尝试获取城市名
+      try {
+        const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
+          signal: AbortSignal.timeout(3000)
+        })
+        if (geoResponse.ok) {
+          const geoData = await geoResponse.json()
+          cityName = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || geoData.address?.country || "未知"
+        }
+      } catch (e) {
+        // 如果地理编码失败，使用默认城市名
+      }
+      
+      // 获取天气
+      const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`)
+      const weatherData = await weatherResponse.json()
+      
+      const temp = `${Math.round(weatherData.current.temperature_2m)}°C`
+      const condition = getConditionFromCode(weatherData.current.weather_code)
+      
+      // 保存位置供下次使用
+      localStorage.setItem("last_location", JSON.stringify({ lat, lon, city: cityName }))
+      
+      setWeather({ temp, condition, city: cityName })
+    } catch (error) {
+      console.log("获取天气失败", error)
+      if (!defaultCity) {
+        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
+      }
+    } finally {
+      setWeatherLoading(false)
+    }
+  }, [])
+
+  // 根据IP获取天气（备用方案）
+  const fetchWeatherByIP = useCallback(async () => {
+    try {
+      const ipResponse = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) })
+      if (!ipResponse.ok) throw new Error('IP API failed')
+      
+      const ipData = await ipResponse.json()
+      const cityName = ipData.city || "上海"
+      const lat = ipData.latitude || 31.2304
+      const lon = ipData.longitude || 121.4737
+      
+      await fetchWeatherByCoords(lat, lon, cityName)
+    } catch (error) {
+      console.log("IP定位获取天气失败", error)
+      setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
+      setWeatherLoading(false)
+    }
+  }, [fetchWeatherByCoords])
+
+  // 尝试更新位置但不阻塞显示
+  const tryUpdateLocation = useCallback(async () => {
+    try {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords
+            await fetchWeatherByCoords(latitude, longitude)
+          },
+          undefined,
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
+        )
+      }
+    } catch (error) {
+      // 静默失败
+    }
+  }, [fetchWeatherByCoords])
+
+  // 获取用户位置和天气 - 优化版
+  const getLocationAndWeather = useCallback(async () => {
+    setWeatherLoading(true)
+    
+    // 先尝试从localStorage获取上次位置
+    const savedLocation = localStorage.getItem("last_location")
+    if (savedLocation) {
+      try {
+        const loc = JSON.parse(savedLocation)
+        await fetchWeatherByCoords(loc.lat, loc.lon, loc.city)
+        // 同时继续尝试更新位置
+        tryUpdateLocation()
+        return
+      } catch (e) {
+        // 继续其他方案
+      }
+    }
+
+    // 多级降级方案
+    try {
+      if (navigator.geolocation) {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          const timeoutId = setTimeout(() => reject(new Error("定位超时")), 5000)
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              clearTimeout(timeoutId)
+              resolve(pos)
+            },
+            (err) => {
+              clearTimeout(timeoutId)
+              reject(err)
+            },
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
+          )
+        })
+        
+        const { latitude, longitude } = position.coords
+        await fetchWeatherByCoords(latitude, longitude)
+        return
+      }
+    } catch (error) {
+      console.log("GPS定位失败，尝试IP定位", error)
+    }
+    
+    // 尝试IP定位
+    try {
+      await fetchWeatherByIP()
+      return
+    } catch (error) {
+      console.log("IP定位也失败，使用默认城市", error)
+    }
+    
+    // 最终使用默认数据
+    setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
+    setWeatherLoading(false)
+  }, [fetchWeatherByCoords, fetchWeatherByIP, tryUpdateLocation])
+
+  // 购物车初始化
+  const initCart = useCallback(() => {
+    const savedCart = localStorage.getItem("cart")
+    if (savedCart) {
+      try {
+        const cart = JSON.parse(savedCart)
+        setCartItems(cart.length || 0)
+      } catch (e) {
+        setCartItems(0)
+      }
+    }
+  }, [])
+
+  // 监听购物车变化
+  const handleCartChange = useCallback(() => {
+    const savedCart = localStorage.getItem("cart")
+    if (savedCart) {
+      try {
+        const cart = JSON.parse(savedCart)
+        setCartItems(cart.length || 0)
+      } catch (e) {
+        setCartItems(0)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const checkLoginStatus = () => {
@@ -78,175 +247,6 @@ export function Navbar() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     
-    // 购物车初始化
-    const initCart = () => {
-      const savedCart = localStorage.getItem("cart")
-      if (savedCart) {
-        try {
-          const cart = JSON.parse(savedCart)
-          setCartItems(cart.length || 0)
-        } catch (e) {
-          setCartItems(0)
-        }
-      }
-    }
-
-    // 监听购物车变化
-    const handleCartChange = () => {
-      const savedCart = localStorage.getItem("cart")
-      if (savedCart) {
-        try {
-          const cart = JSON.parse(savedCart)
-          setCartItems(cart.length || 0)
-        } catch (e) {
-          setCartItems(0)
-        }
-      }
-    }
-
-    // 获取用户位置和天气 - 优化版
-    const getLocationAndWeather = async () => {
-      setWeatherLoading(true)
-      
-      // 先尝试从localStorage获取上次位置
-      const savedLocation = localStorage.getItem("last_location")
-      if (savedLocation) {
-        try {
-          const loc = JSON.parse(savedLocation)
-          await fetchWeatherByCoords(loc.lat, loc.lon, loc.city)
-          // 同时继续尝试更新位置
-          tryUpdateLocation()
-          return
-        } catch (e) {
-          // 继续其他方案
-        }
-      }
-
-      // 多级降级方案
-      try {
-        if (navigator.geolocation) {
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            const timeoutId = setTimeout(() => reject(new Error("定位超时")), 5000)
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                clearTimeout(timeoutId)
-                resolve(pos)
-              },
-              (err) => {
-                clearTimeout(timeoutId)
-                reject(err)
-              },
-              { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
-            )
-          })
-          
-          const { latitude, longitude } = position.coords
-          await fetchWeatherByCoords(latitude, longitude)
-          return
-        }
-      } catch (error) {
-        console.log("GPS定位失败，尝试IP定位", error)
-      }
-      
-      // 尝试IP定位
-      try {
-        await fetchWeatherByIP()
-        return
-      } catch (error) {
-        console.log("IP定位也失败，使用默认城市", error)
-      }
-      
-      // 最终使用默认数据
-      setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
-      setWeatherLoading(false)
-    }
-    
-    // 尝试更新位置但不阻塞显示
-    const tryUpdateLocation = async () => {
-      try {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              const { latitude, longitude } = position.coords
-              await fetchWeatherByCoords(latitude, longitude)
-            },
-            undefined,
-            { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
-          )
-        }
-      } catch (error) {
-        // 静默失败
-      }
-    }
-    
-    // 根据坐标获取天气
-    const fetchWeatherByCoords = async (lat: number, lon: number, defaultCity?: string) => {
-      try {
-        let cityName = defaultCity || "未知"
-        
-        // 尝试获取城市名
-        try {
-          const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
-            signal: AbortSignal.timeout(3000)
-          })
-          if (geoResponse.ok) {
-            const geoData = await geoResponse.json()
-            cityName = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || geoData.address?.country || "未知"
-          }
-        } catch (e) {
-          // 如果地理编码失败，使用默认城市名
-        }
-        
-        // 获取天气
-        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`)
-        const weatherData = await weatherResponse.json()
-        
-        const temp = `${Math.round(weatherData.current.temperature_2m)}°C`
-        const condition = getConditionFromCode(weatherData.current.weather_code)
-        
-        // 保存位置供下次使用
-        localStorage.setItem("last_location", JSON.stringify({ lat, lon, city: cityName }))
-        
-        setWeather({ temp, condition, city: cityName })
-      } catch (error) {
-        console.log("获取天气失败", error)
-        if (!defaultCity) {
-          setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
-        }
-      } finally {
-        setWeatherLoading(false)
-      }
-    }
-    
-    // 根据IP获取天气（备用方案）
-    const fetchWeatherByIP = async () => {
-      try {
-        const ipResponse = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) })
-        if (!ipResponse.ok) throw new Error('IP API failed')
-        
-        const ipData = await ipResponse.json()
-        const cityName = ipData.city || "上海"
-        const lat = ipData.latitude || 31.2304
-        const lon = ipData.longitude || 121.4737
-        
-        await fetchWeatherByCoords(lat, lon, cityName)
-      } catch (error) {
-        console.log("IP定位获取天气失败", error)
-        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
-        setWeatherLoading(false)
-      }
-    }
-    
-    // 将天气代码转换为我们需要的状态
-    const getConditionFromCode = (code: number): string => {
-      if (code === 0) return 'sunny'
-      if (code >= 1 && code <= 3) return 'cloudy'
-      if (code >= 51 && code <= 67) return 'rainy'
-      if (code >= 71 && code <= 86) return 'snowy'
-      if (code >= 95) return 'rainy'
-      return 'sunny'
-    }
-    
     getLocationAndWeather()
     initCart()
     
@@ -261,7 +261,7 @@ export function Navbar() {
       document.removeEventListener('mousedown', handleClickOutside)
       clearInterval(timer)
     }
-  }, [])
+  }, [getLocationAndWeather, initCart, handleCartChange])
 
   const handleLogout = () => {
     localStorage.removeItem("user_logged_in")
@@ -619,14 +619,14 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${
+                  className={`flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 ${
                     activeLink === link.href 
                       ? 'text-white bg-slate-800/70 border border-slate-700/50' 
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                   }`}
                   onClick={() => setIsOpen(false)}
                 >
-                  <link.icon className={`h-5 w-5 ${
+                  <link.icon className={`h-5 w-5 transition-colors ${
                     activeLink === link.href ? 'text-cyan-400' : 'text-blue-400'
                   }`} />
                   <span>{link.label}</span>
