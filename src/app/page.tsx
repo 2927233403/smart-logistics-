@@ -248,7 +248,7 @@ export default function Home() {
                 </Button>
               </Link>
               <Link href="/tracking">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/20 backdrop-blur-sm">
+                <Button size="lg" className="bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm border border-white/30">
                   物流追踪
                 </Button>
               </Link>

@@ -78,25 +78,6 @@ export function Navbar() {
     }
   }, [])
 
-  // 根据IP获取天气（备用方案）
-  const fetchWeatherByIP = useCallback(async () => {
-    try {
-      const ipResponse = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) })
-      if (!ipResponse.ok) throw new Error('IP API failed')
-      
-      const ipData = await ipResponse.json()
-      const cityName = ipData.city || "上海"
-      const lat = ipData.latitude || 31.2304
-      const lon = ipData.longitude || 121.4737
-      
-      await fetchWeatherByCoords(lat, lon, cityName)
-    } catch (error) {
-      console.log("IP定位获取天气失败", error)
-      setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
-      setWeatherLoading(false)
-    }
-  }, [fetchWeatherByCoords])
-
   // 尝试更新位置但不阻塞显示
   const tryUpdateLocation = useCallback(async () => {
     try {
@@ -111,33 +92,38 @@ export function Navbar() {
         )
       }
     } catch (error) {
-      // 静默失败
+      // 静默失败，不打印错误
     }
   }, [fetchWeatherByCoords])
 
   // 获取用户位置和天气 - 优化版
-  const getLocationAndWeather = useCallback(async () => {
+  const getLocationAndWeather = useCallback(async (forceRefresh = false) => {
     setWeatherLoading(true)
     
-    // 先尝试从localStorage获取上次位置
-    const savedLocation = localStorage.getItem("last_location")
-    if (savedLocation) {
-      try {
-        const loc = JSON.parse(savedLocation)
-        await fetchWeatherByCoords(loc.lat, loc.lon, loc.city)
-        // 同时继续尝试更新位置
-        tryUpdateLocation()
-        return
-      } catch (e) {
-        // 继续其他方案
+    // 如果不是强制刷新，先尝试从localStorage获取上次位置作为快速显示
+    if (!forceRefresh) {
+      const savedLocation = localStorage.getItem("last_location")
+      if (savedLocation) {
+        try {
+          const loc = JSON.parse(savedLocation)
+          await fetchWeatherByCoords(loc.lat, loc.lon, loc.city)
+          // 同时继续尝试更新位置
+          tryUpdateLocation()
+          return
+        } catch (e) {
+          // 继续其他方案
+        }
       }
+    } else {
+      // 强制刷新时清除缓存
+      localStorage.removeItem("last_location")
     }
 
     // 多级降级方案
     try {
       if (navigator.geolocation) {
         const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          const timeoutId = setTimeout(() => reject(new Error("定位超时")), 5000)
+          const timeoutId = setTimeout(() => reject(new Error("定位超时")), 8000)
           navigator.geolocation.getCurrentPosition(
             (pos) => {
               clearTimeout(timeoutId)
@@ -147,7 +133,7 @@ export function Navbar() {
               clearTimeout(timeoutId)
               reject(err)
             },
-            { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
           )
         })
         
@@ -156,21 +142,13 @@ export function Navbar() {
         return
       }
     } catch (error) {
-      console.log("GPS定位失败，尝试IP定位", error)
+      // 静默失败，不打印错误
     }
     
-    // 尝试IP定位
-    try {
-      await fetchWeatherByIP()
-      return
-    } catch (error) {
-      console.log("IP定位也失败，使用默认城市", error)
-    }
-    
-    // 最终使用默认数据
-    setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
+    // 最终使用默认数据（跳过所有IP定位，避免网络错误）
+    setWeather({ temp: "25°C", condition: "sunny", city: "义乌" })
     setWeatherLoading(false)
-  }, [fetchWeatherByCoords, fetchWeatherByIP, tryUpdateLocation])
+  }, [fetchWeatherByCoords, tryUpdateLocation])
 
   // 购物车初始化
   const initCart = useCallback(() => {
@@ -383,11 +361,11 @@ export function Navbar() {
             
             {/* 天气信息 - 可点击刷新 */}
             <button
-              onClick={() => getLocationAndWeather()}
+              onClick={() => getLocationAndWeather(true)}
               className={`flex items-center space-x-2 text-sm transition-all duration-300 hover:bg-slate-800/50 px-3 py-1.5 rounded-xl ${
                 weatherLoading ? 'opacity-70 cursor-wait' : 'text-slate-300 hover:text-white cursor-pointer'
               }`}
-              title="点击刷新天气"
+              title="点击刷新天气（强制刷新会清除缓存并重新定位"
             >
               <MapPin className={`h-4 w-4 ${weatherLoading ? 'text-slate-500 animate-pulse' : 'text-blue-400'}`} />
               <span className={weatherLoading ? 'animate-pulse' : ''}>{weather.city}</span>
