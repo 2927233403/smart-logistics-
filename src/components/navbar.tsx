@@ -18,14 +18,15 @@ export function Navbar() {
   const [activeLink, setActiveLink] = useState("")
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [weather, setWeather] = useState({ temp: "--", condition: "sunny", city: "未知" })
+  const [weather, setWeather] = useState({ temp: "--", condition: "sunny", city: "定位中..." })
+  const [weatherLoading, setWeatherLoading] = useState(true)
   const [notifications] = useState([
     { id: 1, message: "您的订单已发货", time: "10分钟前" },
     { id: 2, message: "新的物流信息更新", time: "30分钟前" },
   ])
   const [showNotifications, setShowNotifications] = useState(false)
   const [showCart, setShowCart] = useState(false)
-  const [cartItems] = useState(0)
+  const [cartItems, setCartItems] = useState(0)
   const searchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -77,8 +78,91 @@ export function Navbar() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     
-    // 获取用户位置和天气
+    // 购物车初始化
+    const initCart = () => {
+      const savedCart = localStorage.getItem("cart")
+      if (savedCart) {
+        try {
+          const cart = JSON.parse(savedCart)
+          setCartItems(cart.length || 0)
+        } catch (e) {
+          setCartItems(0)
+        }
+      }
+    }
+
+    // 监听购物车变化
+    const handleCartChange = () => {
+      const savedCart = localStorage.getItem("cart")
+      if (savedCart) {
+        try {
+          const cart = JSON.parse(savedCart)
+          setCartItems(cart.length || 0)
+        } catch (e) {
+          setCartItems(0)
+        }
+      }
+    }
+
+    // 获取用户位置和天气 - 优化版
     const getLocationAndWeather = async () => {
+      setWeatherLoading(true)
+      
+      // 先尝试从localStorage获取上次位置
+      const savedLocation = localStorage.getItem("last_location")
+      if (savedLocation) {
+        try {
+          const loc = JSON.parse(savedLocation)
+          await fetchWeatherByCoords(loc.lat, loc.lon, loc.city)
+          // 同时继续尝试更新位置
+          tryUpdateLocation()
+          return
+        } catch (e) {
+          // 继续其他方案
+        }
+      }
+
+      // 多级降级方案
+      try {
+        if (navigator.geolocation) {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            const timeoutId = setTimeout(() => reject(new Error("定位超时")), 5000)
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                clearTimeout(timeoutId)
+                resolve(pos)
+              },
+              (err) => {
+                clearTimeout(timeoutId)
+                reject(err)
+              },
+              { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
+            )
+          })
+          
+          const { latitude, longitude } = position.coords
+          await fetchWeatherByCoords(latitude, longitude)
+          return
+        }
+      } catch (error) {
+        console.log("GPS定位失败，尝试IP定位", error)
+      }
+      
+      // 尝试IP定位
+      try {
+        await fetchWeatherByIP()
+        return
+      } catch (error) {
+        console.log("IP定位也失败，使用默认城市", error)
+      }
+      
+      // 最终使用默认数据
+      setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
+      setWeatherLoading(false)
+    }
+    
+    // 尝试更新位置但不阻塞显示
+    const tryUpdateLocation = async () => {
       try {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
@@ -86,59 +170,70 @@ export function Navbar() {
               const { latitude, longitude } = position.coords
               await fetchWeatherByCoords(latitude, longitude)
             },
-            async (error) => {
-              console.log("无法获取位置，使用IP定位或默认位置", error)
-              await fetchWeatherByIP()
-            }
+            undefined,
+            { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
           )
-        } else {
-          await fetchWeatherByIP()
         }
       } catch (error) {
-        console.log("获取天气失败，使用默认数据", error)
-        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
+        // 静默失败
       }
     }
     
     // 根据坐标获取天气
-    const fetchWeatherByCoords = async (lat: number, lon: number) => {
+    const fetchWeatherByCoords = async (lat: number, lon: number, defaultCity?: string) => {
       try {
-        const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-        const geoData = await geoResponse.json()
-        const cityName = geoData.address?.city || geoData.address?.town || geoData.address?.county || "未知"
+        let cityName = defaultCity || "未知"
         
+        // 尝试获取城市名
+        try {
+          const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
+            signal: AbortSignal.timeout(3000)
+          })
+          if (geoResponse.ok) {
+            const geoData = await geoResponse.json()
+            cityName = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || geoData.address?.country || "未知"
+          }
+        } catch (e) {
+          // 如果地理编码失败，使用默认城市名
+        }
+        
+        // 获取天气
         const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`)
         const weatherData = await weatherResponse.json()
         
         const temp = `${Math.round(weatherData.current.temperature_2m)}°C`
         const condition = getConditionFromCode(weatherData.current.weather_code)
         
+        // 保存位置供下次使用
+        localStorage.setItem("last_location", JSON.stringify({ lat, lon, city: cityName }))
+        
         setWeather({ temp, condition, city: cityName })
       } catch (error) {
         console.log("获取天气失败", error)
-        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
+        if (!defaultCity) {
+          setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
+        }
+      } finally {
+        setWeatherLoading(false)
       }
     }
     
     // 根据IP获取天气（备用方案）
     const fetchWeatherByIP = async () => {
       try {
-        const ipResponse = await fetch('https://ipapi.co/json/')
+        const ipResponse = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) })
+        if (!ipResponse.ok) throw new Error('IP API failed')
+        
         const ipData = await ipResponse.json()
         const cityName = ipData.city || "上海"
         const lat = ipData.latitude || 31.2304
         const lon = ipData.longitude || 121.4737
         
-        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`)
-        const weatherData = await weatherResponse.json()
-        
-        const temp = `${Math.round(weatherData.current.temperature_2m)}°C`
-        const condition = getConditionFromCode(weatherData.current.weather_code)
-        
-        setWeather({ temp, condition, city: cityName })
+        await fetchWeatherByCoords(lat, lon, cityName)
       } catch (error) {
         console.log("IP定位获取天气失败", error)
         setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
+        setWeatherLoading(false)
       }
     }
     
@@ -153,9 +248,14 @@ export function Navbar() {
     }
     
     getLocationAndWeather()
+    initCart()
+    
+    // 监听购物车变化
+    window.addEventListener("storage", handleCartChange)
     
     return () => {
       window.removeEventListener("storage", checkLoginStatus)
+      window.removeEventListener("storage", handleCartChange)
       window.removeEventListener("scroll", handleScroll)
       window.removeEventListener("popstate", checkActiveLink)
       document.removeEventListener('mousedown', handleClickOutside)
@@ -281,45 +381,108 @@ export function Navbar() {
               )}
             </div>
             
-            {/* 天气信息 */}
-            <div className="flex items-center space-x-2 text-sm text-slate-300 hover:text-white transition-colors duration-300">
-              <MapPin className="h-4 w-4 text-blue-400" />
-              <span>{weather.city}</span>
-              {getWeatherIcon(weather.condition)}
+            {/* 天气信息 - 可点击刷新 */}
+            <button
+              onClick={() => getLocationAndWeather()}
+              className={`flex items-center space-x-2 text-sm transition-all duration-300 hover:bg-slate-800/50 px-3 py-1.5 rounded-xl ${
+                weatherLoading ? 'opacity-70 cursor-wait' : 'text-slate-300 hover:text-white cursor-pointer'
+              }`}
+              title="点击刷新天气"
+            >
+              <MapPin className={`h-4 w-4 ${weatherLoading ? 'text-slate-500 animate-pulse' : 'text-blue-400'}`} />
+              <span className={weatherLoading ? 'animate-pulse' : ''}>{weather.city}</span>
+              {weatherLoading ? (
+                <div className="w-4 h-4 border-2 border-slate-500 border-t-blue-400 rounded-full animate-spin"></div>
+              ) : (
+                getWeatherIcon(weather.condition)
+              )}
               <span>{weather.temp}</span>
-            </div>
+            </button>
             
             {/* 购物车 */}
             <div className="relative cart-container">
               <button
                 onClick={() => setShowCart(!showCart)}
-                className="relative p-2 rounded-full hover:bg-slate-800/50 transition-colors duration-300"
+                className="relative p-2 rounded-full hover:bg-slate-800/50 transition-all duration-300 group"
               >
-                <ShoppingCart className="h-5 w-5 text-slate-400 hover:text-white" />
+                <ShoppingCart className="h-5 w-5 text-slate-400 group-hover:text-white transition-colors" />
                 {cartItems > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center animate-pulse">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 rounded-full text-white text-xs flex items-center justify-center animate-bounce shadow-lg shadow-red-500/30">
                     {cartItems}
                   </span>
                 )}
               </button>
               {showCart && (
                 <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 p-4 z-50 animate-slide-in-from-right">
-                  <h3 className="text-sm font-medium text-white mb-3">购物车</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-white">购物车</h3>
+                    <button
+                      onClick={() => {
+                        localStorage.setItem("cart", JSON.stringify([]))
+                        setCartItems(0)
+                        window.dispatchEvent(new Event('storage'))
+                      }}
+                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      清空
+                    </button>
+                  </div>
                   {cartItems === 0 ? (
-                    <p className="text-slate-400 text-sm">购物车为空</p>
+                    <div className="text-center py-8">
+                      <ShoppingCart className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                      <p className="text-slate-400 text-sm">购物车为空</p>
+                      <p className="text-slate-500 text-xs mt-1">去逛逛添加商品吧</p>
+                    </div>
                   ) : (
-                    <div className="space-y-3">
-                      {/* 购物车项目 */}
-                      <div className="flex items-center justify-between pb-2 border-b border-slate-700/50">
-                        <span className="text-sm text-slate-300">标准物流服务</span>
-                        <span className="text-sm text-white">¥100.00</span>
-                      </div>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {(() => {
+                        try {
+                          const savedCart = localStorage.getItem("cart")
+                          const cart = savedCart ? JSON.parse(savedCart) : []
+                          if (cart.length === 0) return null
+                          return cart.map((item: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between pb-2 border-b border-slate-700/50 group">
+                              <div className="flex-1">
+                                <p className="text-sm text-slate-300 group-hover:text-white transition-colors">{item.name}</p>
+                                <p className="text-xs text-slate-500">{item.desc || ''}</p>
+                              </div>
+                              <div className="text-right ml-3">
+                                <p className="text-sm text-white font-medium">{item.price}</p>
+                                <p className="text-xs text-slate-500">x{item.quantity || 1}</p>
+                              </div>
+                            </div>
+                          ))
+                        } catch {
+                          return null
+                        }
+                      })()}
                     </div>
                   )}
                   {cartItems > 0 && (
-                    <Button className="w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30 border-0">
-                      结算
-                    </Button>
+                    <div className="mt-4 pt-4 border-t border-slate-700/50">
+                      <div className="flex justify-between mb-3">
+                        <span className="text-slate-400 text-sm">合计</span>
+                        <span className="text-white font-semibold text-lg">
+                          {(() => {
+                            try {
+                              const savedCart = localStorage.getItem("cart")
+                              const cart = savedCart ? JSON.parse(savedCart) : []
+                              let total = 0
+                              cart.forEach((item: any) => {
+                                const price = parseFloat((item.price || '0').replace(/[^0-9.]/g, ''))
+                                total += price * (item.quantity || 1)
+                              })
+                              return `¥${total.toFixed(2)}`
+                            } catch {
+                              return '¥0.00'
+                            }
+                          })()}
+                        </span>
+                      </div>
+                      <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30 border-0">
+                        去结算
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
