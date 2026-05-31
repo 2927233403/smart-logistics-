@@ -12,7 +12,8 @@ export function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [userName, setUserName] = useState("")
-  const [currentTime, setCurrentTime] = useState(new Date())
+  const [currentTime, setCurrentTime] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [activeLink, setActiveLink] = useState("")
   const [showSearch, setShowSearch] = useState(false)
@@ -39,8 +40,11 @@ export function Navbar() {
     checkLoginStatus()
     window.addEventListener("storage", checkLoginStatus)
     
+    setMounted(true)
+    
     // 时钟更新
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString('zh-CN')), 1000)
+    setCurrentTime(new Date().toLocaleTimeString('zh-CN'))
     
     // 滚动监听
     const handleScroll = () => {
@@ -355,7 +359,7 @@ export function Navbar() {
             {/* 时间显示 */}
             <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 hover:text-slate-400 transition-colors duration-300">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>{currentTime.toLocaleTimeString('zh-CN')}</span>
+              <span>{mounted ? (currentTime || '--:--:--') : '--:--:--'}</span>
             </div>
           </div>
 
