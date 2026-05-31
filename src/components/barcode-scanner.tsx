@@ -21,6 +21,8 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
   const [cameraError, setCameraError] = useState<string>('')
   const [cameraActive, setCameraActive] = useState(false)
   const [lastScanTime, setLastScanTime] = useState(0)
+  const [scanWarning, setScanWarning] = useState<string>('')
+  const [pendingMockCode, setPendingMockCode] = useState<string>('')
 
   // 启动摄像头
   const startCamera = useCallback(async () => {
@@ -187,6 +189,9 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
 
   // 手动扫描按钮
   const handleManualScan = useCallback(() => {
+    setScanWarning('')
+    setPendingMockCode('')
+    
     if (!videoRef.current || !canvasRef.current) return
 
     try {
@@ -214,17 +219,31 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
       if (code) {
         onScan(code.data)
       } else {
-        // 如果没有识别到二维码，生成一个模拟的条码用于测试
+        // 如果没有识别到二维码，显示警告提示用户重新对准
+        setScanWarning('未能识别到有效的二维码或条码，请确保条码清晰可见并对准扫描框')
         const mockBarcode = `SCAN${Date.now().toString().slice(-8)}`
-        onScan(mockBarcode)
+        setPendingMockCode(mockBarcode)
       }
     } catch (error) {
       console.error('手动扫描错误:', error)
-      // 生成模拟条码作为备用
-      const mockBarcode = `SCAN${Date.now().toString().slice(-8)}`
-      onScan(mockBarcode)
+      setScanWarning('扫描过程中出现错误，请重试')
     }
   }, [onScan])
+
+  // 使用模拟条码
+  const handleUseMockCode = useCallback(() => {
+    if (pendingMockCode) {
+      onScan(pendingMockCode)
+      setScanWarning('')
+      setPendingMockCode('')
+    }
+  }, [onScan, pendingMockCode])
+
+  // 取消模拟条码
+  const handleCancelMockCode = useCallback(() => {
+    setScanWarning('')
+    setPendingMockCode('')
+  }, [])
 
   // 清理
   useEffect(() => {
@@ -301,6 +320,37 @@ export function BarcodeScanner({ onScan, onError }: BarcodeScannerProps) {
           <p className="absolute bottom-16 left-0 right-0 text-center text-white/80 text-sm">
             将二维码/条码对准扫描框
           </p>
+
+          {/* 警告提示 */}
+          {scanWarning && (
+            <div className="absolute top-1/2 left-0 right-0 transform -translate-y-1/2 mx-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm text-amber-700 mb-2">{scanWarning}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleManualScan}
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 border-amber-300 text-amber-700 hover:bg-amber-100"
+                      >
+                        重新扫描
+                      </Button>
+                      <Button
+                        onClick={handleUseMockCode}
+                        size="sm"
+                        className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+                      >
+                        使用模拟码
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <Card className="border-2 border-dashed border-slate-300">
