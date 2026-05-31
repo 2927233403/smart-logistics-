@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Menu, X, User, LogOut, Settings, ChevronDown, Zap, Activity, Globe, Terminal, Search, Sun, Cloud, CloudRain, Snowflake, MapPin, Bell, ShoppingCart, BarChart2, Warehouse } from "lucide-react"
+import { Menu, X, User, LogOut, Settings, ChevronDown, Zap, Activity, Globe, Terminal, Search, Sun, Cloud, CloudRain, Snowflake, MapPin, Bell, ShoppingCart, BarChart2, Warehouse, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import SmartChineseLogo from "@/components/SmartChineseLogo"
@@ -260,6 +260,7 @@ export function Navbar() {
   const navLinks = [
     { href: "/", label: "首页", icon: Zap },
     { href: "/tracking", label: "物流追踪", icon: Activity },
+    { href: "/ai-chat", label: "AI助手", icon: Sparkles },
     { href: "/services", label: "服务介绍", icon: Globe },
     { href: "/warehouse", label: "仓储管理", icon: Warehouse },
     { href: "/admin", label: "管理后台", icon: Terminal },
