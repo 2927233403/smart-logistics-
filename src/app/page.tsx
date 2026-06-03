@@ -705,6 +705,115 @@ export default function Home() {
         </div>
       </section>
 
+      {/* 更新日志 Section - 折叠式 */}
+      <section className={`py-8 transition-all duration-700 ${isDark ? 'bg-slate-900/50' : 'bg-gray-50'}`}>
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <details className="group">
+              <summary className={`flex items-center justify-between p-6 rounded-2xl cursor-pointer transition-all duration-300 hover:shadow-lg ${isDark ? 'bg-slate-800/50 border border-slate-700/50 hover:border-cyan-500/30' : 'bg-white border border-gray-200 hover:border-cyan-500/30'}`}>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                    <Activity className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                      系统更新记录
+                    </h3>
+                    <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                      查看最新的功能更新和改进
+                    </p>
+                  </div>
+                </div>
+                <div className={`flex items-center gap-2 transition-transform duration-300 group-open:rotate-180 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
+              </summary>
+              
+              <div className="mt-4 space-y-4">
+                {/* 更新日志条目 */}
+                {[
+                  {
+                    version: "v2.0.1",
+                    date: "2026年6月1日",
+                    title: "AI智能助手与文件管理",
+                    changes: [
+                      "新增AI智能助手页面，支持文本和语音输入",
+                      "优化文件上传下载功能，支持多种格式",
+                      "添加智能搜索建议功能",
+                      "优化导航栏UI和交互体验",
+                      "修复多个已知问题"
+                    ],
+                    type: "feature"
+                  },
+                  {
+                    version: "v2.0.0",
+                    date: "2026年5月30日",
+                    title: "全新升级版本",
+                    changes: [
+                      "全新的主题系统，支持多种主题切换",
+                      "优化定位和天气功能",
+                      "改进购物车功能",
+                      "添加更新公告自动展示",
+                      "优化整体UI美观度"
+                    ],
+                    type: "major"
+                  },
+                  {
+                    version: "v1.5.0",
+                    date: "2026年5月28日",
+                    title: "功能增强",
+                    changes: [
+                      "添加物流追踪查询历史",
+                      "优化仓储管理页面",
+                      "改进响应式设计",
+                      "添加企业科技感图片"
+                    ],
+                    type: "enhancement"
+                  }
+                ].map((update, index) => (
+                  <Card key={index} className={`overflow-hidden transition-all duration-300 hover:shadow-xl ${isDark ? 'bg-slate-800/50 border-slate-700/50 hover:border-cyan-500/30' : 'bg-white border-gray-200 hover:border-cyan-500/30'}`}>
+                    <div className="flex flex-col md:flex-row">
+                      {/* 左侧版本信息 */}
+                      <div className={`p-6 md:w-48 flex md:flex-col items-center md:items-start gap-4 md:gap-2 ${isDark ? 'bg-slate-800/50' : 'bg-gray-50'}`}>
+                        <div className={`px-3 py-1 rounded-full text-sm font-bold ${
+                          update.type === 'major' 
+                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' 
+                            : update.type === 'feature'
+                            ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
+                            : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                        }`}>
+                          {update.version}
+                        </div>
+                        <div className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                          {update.date}
+                        </div>
+                      </div>
+                      
+                      {/* 右侧更新内容 */}
+                      <CardContent className="flex-1 p-6">
+                        <h3 className={`text-xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {update.title}
+                        </h3>
+                        <ul className="space-y-2">
+                          {update.changes.map((change, i) => (
+                            <li key={i} className={`flex items-start gap-2 text-sm ${isDark ? 'text-slate-300' : 'text-gray-700'}`}>
+                              <CheckCircle className={`h-4 w-4 mt-0.5 flex-shrink-0 ${isDark ? 'text-cyan-400' : 'text-cyan-600'}`} />
+                              <span>{change}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section className={`py-20 transition-all duration-700 ${theme.featuresBg}`}>
         <div className="container mx-auto px-4">
@@ -751,13 +860,14 @@ export default function Home() {
             立即注册，体验智能物流带来的便捷与高效
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="bg-white text-gray-900 hover:bg-gray-100 shadow-xl rounded-2xl h-12">
-              免费注册
-            </Button>
+            <Link href="/login?tab=register">
+              <Button size="lg" className="bg-white text-gray-900 hover:bg-gray-100 shadow-xl rounded-2xl h-12 px-8 font-semibold">
+                免费注册
+              </Button>
+            </Link>
             <Button 
               size="lg" 
-              variant="outline" 
-              className="border-white text-white hover:bg-white/20 backdrop-blur-sm rounded-2xl h-12"
+              className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-gray-900 backdrop-blur-sm rounded-2xl h-12 px-8 font-semibold shadow-lg transition-all duration-300"
               onClick={() => setShowContactModal(true)}
             >
               联系我们

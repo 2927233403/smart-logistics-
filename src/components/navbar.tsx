@@ -27,7 +27,17 @@ export function Navbar() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showCart, setShowCart] = useState(false)
   const [cartItems, setCartItems] = useState(0)
+  const [isNavVisible, setIsNavVisible] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([])
   const searchRef = useRef<HTMLDivElement>(null)
+
+  // 智能搜索建议
+  const allSuggestions = [
+    "物流追踪", "订单查询", "国际快递", "仓储服务", 
+    "配送服务", "货物保险", "智能调度", "运费计算",
+    "上门取件", "电子面单", "批量下单", "对账单"
+  ]
 
   // 将天气代码转换为我们需要的状态
   const getConditionFromCode = (code: number): string => {
@@ -254,8 +264,28 @@ export function Navbar() {
     if (searchQuery.trim()) {
       // 这里可以实现搜索功能
       console.log('搜索:', searchQuery)
+      // 根据搜索内容跳转到相应页面
+      if (searchQuery.includes('追踪') || searchQuery.includes('订单')) {
+        window.location.href = '/tracking'
+      } else if (searchQuery.includes('仓储')) {
+        window.location.href = '/warehouse'
+      } else if (searchQuery.includes('AI') || searchQuery.includes('助手')) {
+        window.location.href = '/ai-chat'
+      }
     }
   }
+
+  // 智能搜索建议更新
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const filtered = allSuggestions.filter(s => 
+        s.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      setSearchSuggestions(filtered.slice(0, 5))
+    } else {
+      setSearchSuggestions(allSuggestions.slice(0, 6))
+    }
+  }, [searchQuery])
 
   const navLinks = [
     { href: "/", label: "首页", icon: Zap },
@@ -340,21 +370,56 @@ export function Navbar() {
                 <Search className="h-5 w-5 text-slate-400 hover:text-white" />
               </button>
               {showSearch && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 p-3 z-50 animate-slide-in-from-right">
-                  <form onSubmit={handleSearch} className="flex items-center space-x-2">
-                    <Input
-                      type="text"
-                      placeholder="搜索订单、服务或路线..."
-                      className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <Button type="submit" size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30 border-0">
+                <div className="absolute right-0 top-full mt-2 w-96 bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 p-4 z-50 animate-slide-in-from-right">
+                  <form onSubmit={handleSearch} className="flex items-center space-x-2 mb-3">
+                    <div className="flex-1 relative">
+                      <Input
+                        type="text"
+                        placeholder="搜索订单、服务或路线..."
+                        className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-cyan-500 pr-10"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        autoFocus
+                      />
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    </div>
+                    <Button type="submit" size="sm" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white shadow-lg shadow-cyan-500/30 border-0">
                       搜索
                     </Button>
                   </form>
-                  <div className="mt-2 text-xs text-slate-500">
-                    热门搜索: 物流追踪, 国际快递, 仓储服务
+                  
+                  {/* 智能搜索建议 */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3 text-cyan-400" />
+                        智能建议
+                      </span>
+                      {searchQuery && (
+                        <span className="text-xs text-cyan-400">找到 {searchSuggestions.length} 个结果</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {searchSuggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setSearchQuery(suggestion)
+                            handleSearch({ preventDefault: () => {} } as any)
+                          }}
+                          className="px-3 py-1.5 text-xs rounded-lg bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white transition-all duration-200 border border-slate-700/30 hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3 pt-3 border-t border-slate-700/30 text-xs text-slate-500 flex items-center gap-2">
+                    <kbd className="px-2 py-0.5 rounded bg-slate-800 text-slate-400">Enter</kbd>
+                    <span>快速搜索</span>
+                    <kbd className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 ml-2">Esc</kbd>
+                    <span>关闭</span>
                   </div>
                 </div>
               )}
