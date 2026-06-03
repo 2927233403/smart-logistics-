@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Menu, X, User, LogOut, Settings, ChevronDown, Zap, Activity, Globe, Terminal, Search, Sun, Cloud, CloudRain, Snowflake, MapPin, Bell, ShoppingCart, BarChart2, Warehouse, Sparkles, Truck } from "lucide-react"
+import { Menu, X, User, LogOut, Settings, ChevronDown, Zap, Activity, Globe, Terminal, Search, Sun, Cloud, CloudRain, Snowflake, MapPin, Bell, ShoppingCart, BarChart2, Warehouse, Sparkles, Truck, Home, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import SmartChineseLogo from "@/components/SmartChineseLogo"
@@ -27,9 +27,11 @@ export function Navbar() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showCart, setShowCart] = useState(false)
   const [cartItems, setCartItems] = useState(0)
+  const [showSmartPanel, setShowSmartPanel] = useState(false)
   const [isNavVisible, setIsNavVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([])
+  const [systemInfo, setSystemInfo] = useState({ version: "v0.1.0", lastUpdate: "获取中...", environment: "开发环境" })
   const searchRef = useRef<HTMLDivElement>(null)
 
   // 智能搜索建议
@@ -173,6 +175,43 @@ export function Navbar() {
     }
   }, [])
 
+  // 获取系统信息
+  const fetchSystemInfo = useCallback(async () => {
+    try {
+      // 从更新日志获取最后更新时间
+      const response = await fetch('/data/changelog.json')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.length > 0 && data[0].date) {
+          // 获取当前时间用于时间显示
+          const now = new Date()
+          const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+          setSystemInfo(prev => ({
+            ...prev,
+            lastUpdate: `${data[0].date} ${timeStr}`
+          }))
+        }
+      }
+    } catch (error) {
+      // 如果获取失败，使用默认值
+      const now = new Date()
+      const dateStr = now.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')
+      const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      setSystemInfo(prev => ({
+        ...prev,
+        lastUpdate: `${dateStr} ${timeStr}`
+      }))
+    }
+    
+    // 检测运行环境
+    const env = process.env.NODE_ENV || 'development'
+    const envText = env === 'production' ? '生产环境' : '开发环境'
+    setSystemInfo(prev => ({
+      ...prev,
+      environment: envText
+    }))
+  }, [])
+
   // 监听购物车变化
   const handleCartChange = useCallback(() => {
     const savedCart = localStorage.getItem("cart")
@@ -237,6 +276,7 @@ export function Navbar() {
     
     getLocationAndWeather()
     initCart()
+    fetchSystemInfo()
     
     // 监听购物车变化
     window.addEventListener("storage", handleCartChange)
@@ -249,7 +289,7 @@ export function Navbar() {
       document.removeEventListener('mousedown', handleClickOutside)
       clearInterval(timer)
     }
-  }, [getLocationAndWeather, initCart, handleCartChange])
+  }, [getLocationAndWeather, initCart, handleCartChange, fetchSystemInfo])
 
   const handleLogout = () => {
     localStorage.removeItem("user_logged_in")
@@ -528,6 +568,120 @@ export function Navbar() {
                       </Button>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+            
+            {/* 智能面板 - 返回主页 */}
+            <div className="relative smart-panel-container">
+              <button
+                onClick={() => setShowSmartPanel(!showSmartPanel)}
+                className="relative p-2 rounded-full hover:bg-slate-800/50 transition-all duration-300 group"
+                title="智能面板"
+              >
+                <Home className="h-5 w-5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+              </button>
+              {showSmartPanel && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-cyan-500/20 border border-slate-700/50 p-4 z-50 animate-slide-in-from-right">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-cyan-400" />
+                      <h3 className="text-sm font-medium text-white">智能面板</h3>
+                    </div>
+                    <span className="text-xs text-cyan-400">快捷操作</span>
+                  </div>
+                  
+                  {/* 快捷导航 */}
+                  <div className="space-y-2">
+                    <Link 
+                      href="/" 
+                      onClick={() => setShowSmartPanel(false)}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-200 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                        <Home className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white group-hover:text-cyan-400 transition-colors">返回主页</p>
+                        <p className="text-xs text-slate-500">快速返回首页</p>
+                      </div>
+                    </Link>
+                    
+                    <Link 
+                      href="/ai-chat" 
+                      onClick={() => setShowSmartPanel(false)}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-200 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center">
+                        <MessageSquare className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white group-hover:text-cyan-400 transition-colors">AI助手</p>
+                        <p className="text-xs text-slate-500">智能客服咨询</p>
+                      </div>
+                    </Link>
+                    
+                    <Link 
+                      href="/tracking" 
+                      onClick={() => setShowSmartPanel(false)}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-200 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                        <MapPin className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white group-hover:text-cyan-400 transition-colors">物流追踪</p>
+                        <p className="text-xs text-slate-500">实时货物跟踪</p>
+                      </div>
+                    </Link>
+                    
+                    <Link 
+                      href="/warehouse" 
+                      onClick={() => setShowSmartPanel(false)}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-200 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                        <Warehouse className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white group-hover:text-cyan-400 transition-colors">仓储管理</p>
+                        <p className="text-xs text-slate-500">库存与订单管理</p>
+                      </div>
+                    </Link>
+                  </div>
+                  
+                  {/* 系统信息 */}
+                  <div className="mt-3 pt-3 border-t border-slate-700/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Terminal className="h-3 w-3 text-green-400" />
+                      <span className="text-xs text-slate-500">系统信息</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">版本号</span>
+                        <span className="text-cyan-400 font-medium">{systemInfo.version}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">最后更新</span>
+                        <span className="text-slate-300">{systemInfo.lastUpdate}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">运行环境</span>
+                        <span className={systemInfo.environment === '生产环境' ? 'text-green-400' : systemInfo.environment === '测试环境' ? 'text-yellow-400' : 'text-blue-400'}>{systemInfo.environment}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* 智能提示 */}
+                  <div className="mt-3 pt-3 border-t border-slate-700/30">
+                    <div className="flex items-start gap-2">
+                      <Zap className="h-3 w-3 text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-slate-400">
+                        点击图标可快速导航到常用功能
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

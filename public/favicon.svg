@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="truckGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="cabGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0891b2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0e7490;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="wheelGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f172a;stop-opacity:1" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- 背景圆 -->
+  <circle cx="32" cy="32" r="30" fill="#0f172a"/>
+  
+  <!-- 卡车主体 -->
+  <rect x="12" y="30" width="36" height="16" rx="2" fill="url(#truckGradient)" filter="url(#glow)"/>
+  
+  <!-- 驾驶室 -->
+  <rect x="44" y="26" width="14" height="20" rx="2" fill="url(#cabGradient)"/>
+  
+  <!-- 驾驶室窗户 -->
+  <rect x="47" y="29" width="8" height="6" rx="1" fill="#e0f2fe" opacity="0.8"/>
+  
+  <!-- 前轮 -->
+  <circle cx="50" cy="48" r="5" fill="url(#wheelGradient)"/>
+  <circle cx="50" cy="48" r="2" fill="#475569"/>
+  
+  <!-- 后轮 -->
+  <circle cx="18" cy="48" r="5" fill="url(#wheelGradient)"/>
+  <circle cx="18" cy="48" r="2" fill="#475569"/>
+  <circle cx="32" cy="48" r="5" fill="url(#wheelGradient)"/>
+  <circle cx="32" cy="48" r="2" fill="#475569"/>
+  
+  <!-- 货物箱高光 -->
+  <rect x="14" y="32" width="8" height="12" rx="1" fill="white" opacity="0.1"/>
+  
+  <!-- 发光效果 -->
+  <circle cx="32" cy="32" r="28" fill="none" stroke="#06b6d4" stroke-width="1" opacity="0.3">
+    <animate attributeName="r" values="28;32;28" dur="3s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.3;0.1;0.3" dur="3s" repeatCount="indefinite"/>
+  </circle>
+  
+  <!-- 星星装饰 -->
+  <polygon points="8,18 9.5,22 14,22 10.5,24.5 12,29 8,26 4,29 5.5,24.5 2,22 6.5,22" fill="#fbbf24" opacity="0.6"/>
+  <polygon points="56,12 57,14 59,14 57.5,15.5 58,17.5 56,16.5 54,17.5 54.5,15.5 53,14 55,14" fill="#fbbf24" opacity="0.4"/>
+</svg>
