@@ -10,9 +10,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "测试网站-吴 - 智能物流管理平台",
+  title: "智能物流管理平台",
   description: "专业的智能物流管理解决方案，提供实时追踪、智能调度、数据分析等功能",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
+
 
 export default function RootLayout({
   children,

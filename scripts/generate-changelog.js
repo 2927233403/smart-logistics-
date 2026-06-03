@@ -79,7 +79,12 @@ function main() {
   const commits = getGitCommits();
   const changelog = generateChangelog(commits);
   
-  const outputPath = path.join(__dirname, '../src/data/changelog.json');
+  const outputDir = path.join(__dirname, '../public/data');
+  const outputPath = path.join(outputDir, 'changelog.json');
+  
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
   
   fs.writeFileSync(outputPath, JSON.stringify(changelog, null, 2));
   console.log(`更新日志已生成: ${outputPath}`);

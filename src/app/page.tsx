@@ -196,16 +196,35 @@ export default function Home() {
   const fetchChangelog = async () => {
     setIsRefreshing(true)
     try {
-      const response = await fetch('/api/changelog')
-      const data: DynamicChangelog[] = await response.json()
+      // 首先尝试从构建时生成的静态文件获取
+      const staticResponse = await fetch('/data/changelog.json')
+      if (staticResponse.ok) {
+        const staticData: DynamicChangelog[] = await staticResponse.json()
+        if (staticData.length > 0 && staticData[0].changes.length > 0) {
+          const latestLog: UpdateLog = {
+            version: staticData[0].version,
+            date: formatDate(staticData[0].date),
+            title: staticData[0].title,
+            changes: staticData[0].changes.map(c => c.message),
+            type: staticData[0].type
+          }
+          setUpdateLogs([latestLog, ...staticLogs])
+          setIsRefreshing(false)
+          return
+        }
+      }
       
-      if (data.length > 0 && data[0].changes.length > 0) {
+      // 如果静态文件没有数据，尝试从API获取（开发环境）
+      const apiResponse = await fetch('/api/changelog')
+      const apiData: DynamicChangelog[] = await apiResponse.json()
+      
+      if (apiData.length > 0 && apiData[0].changes.length > 0) {
         const latestLog: UpdateLog = {
-          version: data[0].version,
-          date: formatDate(data[0].date),
-          title: data[0].title,
-          changes: data[0].changes.map(c => c.message),
-          type: data[0].type
+          version: apiData[0].version,
+          date: formatDate(apiData[0].date),
+          title: apiData[0].title,
+          changes: apiData[0].changes.map(c => c.message),
+          type: apiData[0].type
         }
         setUpdateLogs([latestLog, ...staticLogs])
       } else {
@@ -824,7 +843,7 @@ export default function Home() {
                       系统更新记录
                     </h3>
                     <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
-                      查看最新的功能更新和改进
+                      查看最新的功能更新和改进 · 共 {updateLogs.length} 条
                     </p>
                   </div>
                 </div>

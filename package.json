@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/generate-changelog.js && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "generate-changelog": "node scripts/generate-changelog.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
