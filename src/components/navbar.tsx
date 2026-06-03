@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Menu, X, User, LogOut, Settings, ChevronDown, Zap, Activity, Globe, Terminal, Search, Sun, Cloud, CloudRain, Snowflake, MapPin, Bell, ShoppingCart, BarChart2, Warehouse, Sparkles } from "lucide-react"
+import { Menu, X, User, LogOut, Settings, ChevronDown, Zap, Activity, Globe, Terminal, Search, Sun, Cloud, CloudRain, Snowflake, MapPin, Bell, ShoppingCart, BarChart2, Warehouse, Sparkles, Truck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import SmartChineseLogo from "@/components/SmartChineseLogo"
@@ -325,14 +325,14 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 group">
             <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all duration-300 group-hover:scale-110 animate-float">
-                <SmartChineseLogo variant="mini" className="w-8 h-8" animated={true} />
+              <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/30 group-hover:shadow-cyan-500/50 transition-all duration-300 group-hover:scale-110 animate-float overflow-hidden">
+                <Truck className="h-6 w-6 text-white" />
               </div>
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             </div>
             <div className="hidden sm:block">
-              <span className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-400 transition-colors duration-300">测试网站-吴</span>
-              <span className="text-xs text-blue-400 block tracking-wider group-hover:text-cyan-400 transition-colors duration-300">SMART LOGISTICS</span>
+              <span className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-400 transition-colors duration-300">智能物流管理平台</span>
+              <span className="text-xs text-cyan-400 block tracking-wider group-hover:text-cyan-300 transition-colors duration-300">Smart Logistics</span>
             </div>
           </Link>
 
