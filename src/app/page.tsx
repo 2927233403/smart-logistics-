@@ -311,6 +311,8 @@ export default function Home() {
     }
   ]
 
+  // 修复：添加额外的注释确保Git检测到修改
+
   // 下载示例软件包
   const downloadSoftwarePackage = (pkg: any) => {
     // 创建一个模拟的下载
