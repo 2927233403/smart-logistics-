@@ -340,9 +340,14 @@ export default function AdminLayout({
             </div>
             
             {/* Notifications */}
-            <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            <button className="relative p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-300 group">
+              <Bell className="h-5 w-5 group-hover:scale-110 transition-transform" />
+              {/* 高级质感徽章 */}
+              <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full text-white text-[10px] font-medium flex items-center justify-center shadow-lg shadow-blue-500/30">
+                2
+              </span>
+              {/* 脉冲光环 */}
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-blue-400 rounded-full animate-ping opacity-20"></span>
             </button>
             
             {/* User Menu */}

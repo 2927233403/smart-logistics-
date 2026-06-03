@@ -690,29 +690,61 @@ export function Navbar() {
             <div className="relative notification-container">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 rounded-full hover:bg-slate-800/50 transition-colors duration-300"
+                className="relative p-2 rounded-full hover:bg-slate-800/50 transition-all duration-300 group"
               >
-                <Bell className="h-5 w-5 text-slate-400 hover:text-white" />
+                <Bell className="h-5 w-5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
                 {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center animate-pulse">
-                    {notifications.length}
-                  </span>
+                  <>
+                    {/* 高级质感徽章 */}
+                    <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full text-white text-xs font-medium flex items-center justify-center shadow-lg shadow-cyan-500/30 group-hover:shadow-cyan-400/50 transition-all duration-300">
+                      {notifications.length}
+                    </span>
+                    {/* 脉冲光环效果 */}
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-cyan-400 rounded-full animate-ping opacity-30"></span>
+                  </>
                 )}
               </button>
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 p-4 z-50 animate-slide-in-from-right">
-                  <h3 className="text-sm font-medium text-white mb-3">通知</h3>
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {notifications.map((notification) => (
-                      <div key={notification.id} className="p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-300">
-                        <p className="text-sm text-slate-300">{notification.message}</p>
-                        <p className="text-xs text-slate-500">{notification.time}</p>
+                <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-cyan-500/10 border border-slate-700/50 z-50 overflow-hidden">
+                  {/* 头部 */}
+                  <div className="px-4 py-3 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-b border-slate-700/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+                        <h3 className="text-sm font-medium text-white">智能通知</h3>
+                      </div>
+                      <span className="text-xs text-slate-500">{notifications.length} 条未读</span>
+                    </div>
+                  </div>
+                  
+                  {/* 通知列表 */}
+                  <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
+                    {notifications.map((notification, index) => (
+                      <div 
+                        key={notification.id} 
+                        className="p-3 rounded-lg hover:bg-slate-800/50 transition-all duration-300 group cursor-pointer border border-transparent hover:border-cyan-500/20"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            index === 0 ? 'bg-gradient-to-br from-cyan-500 to-blue-500' : 'bg-gradient-to-br from-violet-500 to-purple-500'
+                          }`}>
+                            <Bell className="h-4 w-4 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-slate-200 group-hover:text-white transition-colors">{notification.message}</p>
+                            <p className="text-xs text-slate-500 mt-1">{notification.time}</p>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full mt-3 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">
-                    查看全部
-                  </Button>
+                  
+                  {/* 底部 */}
+                  <div className="px-4 py-3 border-t border-slate-700/30 bg-slate-800/30">
+                    <Button variant="ghost" size="sm" className="w-full text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-all">
+                      查看全部通知
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
