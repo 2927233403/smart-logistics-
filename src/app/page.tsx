@@ -817,11 +817,22 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className={`text-3xl md:text-4xl font-black mb-2 bg-gradient-to-r ${theme.gradient} bg-clip-text text-transparent`}>
-                  {stat.value}
+              <div 
+                key={index} 
+                className="text-center group"
+              >
+                <div className="relative inline-block">
+                  <div className={`text-3xl md:text-4xl font-black mb-2 bg-gradient-to-r ${theme.gradient} bg-clip-text text-transparent transition-transform duration-300 group-hover:scale-110`}>
+                    {stat.value}
+                  </div>
+                  {/* 数字发光效果 */}
+                  <div className={`absolute inset-0 text-3xl md:text-4xl font-black bg-gradient-to-r ${theme.gradient} bg-clip-text text-transparent blur-sm opacity-0 group-hover:opacity-50 transition-opacity duration-300`}>
+                    {stat.value}
+                  </div>
                 </div>
-                <div className={`${isDark ? 'text-slate-400' : 'text-gray-600'} font-medium`}>{stat.label}</div>
+                <div className={`${isDark ? 'text-slate-400' : 'text-gray-600'} font-medium transition-colors duration-300 group-hover:text-cyan-500`}>
+                  {stat.label}
+                </div>
               </div>
             ))}
           </div>

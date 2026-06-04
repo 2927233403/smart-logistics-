@@ -2,33 +2,52 @@
 
 import { useState, useEffect } from "react"
 import { Search, Plus, Eye, Edit, Trash2, Upload, X, FileText, Check, Download, RefreshCw } from "lucide-react"
-import { getOrders, saveOrders, deleteOrder, generateOrderId, initSampleOrders, OrderData } from "@/lib/orderStorage"
+
+// Types
+interface Order {
+  id: string
+  customer: string
+  phone: string
+  destination: string
+  status: string
+  amount: string
+  date: string
+  items?: string
+  weight?: string
+  notes?: string
+}
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<OrderData[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [importText, setImportText] = useState("")
-  const [importPreview, setImportPreview] = useState<Partial<OrderData>[]>([])
-  const [selectedOrder, setSelectedOrder] = useState<OrderData | null>(null)
+  const [importPreview, setImportPreview] = useState<Partial<Order>[]>([])
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
 
-  // 加载订单数据
+  // Load orders from API
   useEffect(() => {
-    initSampleOrders()
     loadOrders()
   }, [])
 
-  const loadOrders = () => {
-    const data = getOrders()
-    setOrders(data)
-    setIsLoading(false)
+  const loadOrders = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/orders')
+      const data = await response.json()
+      setOrders(data)
+    } catch (error) {
+      console.error('Failed to load orders:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  // 过滤订单
+  // Filter orders
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -41,7 +60,7 @@ export default function OrdersPage() {
     return matchesSearch && matchesStatus
   })
 
-  // 生成新订单号
+  // Generate new order ID
   const generateOrderId = () => {
     const maxId = orders.reduce((max, order) => {
       const num = parseInt(order.id.replace("ORD-", ""))
@@ -50,18 +69,22 @@ export default function OrdersPage() {
     return `ORD-${String(maxId + 1).padStart(3, "0")}`
   }
 
-  // 删除订单
-  const handleDelete = (id: string) => {
+  // Delete order
+  const handleDelete = async (id: string) => {
     if (confirm("确定要删除这个订单吗？")) {
-      deleteOrder(id)
-      loadOrders()
+      try {
+        await fetch(`/api/orders?id=${id}`, { method: 'DELETE' })
+        loadOrders()
+      } catch (error) {
+        console.error('Failed to delete order:', error)
+      }
     }
   }
 
-  // 解析导入文本
+  // Parse import text
   const parseImportText = (text: string) => {
     const lines = text.trim().split("\n").filter(line => line.trim())
-    const preview: Partial<OrderData>[] = []
+    const preview: Partial<Order>[] = []
     
     lines.forEach((line, index) => {
       const parts = line.split(/[,\t，]/).map(p => p.trim())
@@ -81,55 +104,75 @@ export default function OrdersPage() {
     return preview
   }
 
-  // 处理导入文本变化
+  // Handle import text change
   const handleImportTextChange = (text: string) => {
     setImportText(text)
     setImportPreview(parseImportText(text))
   }
 
-  // 确认导入
-  const confirmImport = () => {
+  // Confirm import
+  const confirmImport = async () => {
     if (importPreview.length > 0) {
-      const newOrders = [...orders, ...importPreview as OrderData[]]
-      saveOrders(newOrders)
-      loadOrders()
-      setShowImportModal(false)
-      setImportText("")
-      setImportPreview([])
-      alert(`成功导入 ${importPreview.length} 条订单！`)
+      try {
+        for (const order of importPreview as Order[]) {
+          await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(order)
+          })
+        }
+        loadOrders()
+        setShowImportModal(false)
+        setImportText("")
+        setImportPreview([])
+        alert(`成功导入 ${importPreview.length} 条订单！`)
+      } catch (error) {
+        console.error('Failed to import orders:', error)
+      }
     }
   }
 
-  // 查看订单详情
-  const handleViewOrder = (order: OrderData) => {
+  // View order details
+  const handleViewOrder = (order: Order) => {
     setSelectedOrder(order)
     setShowDetailModal(true)
   }
 
-  // 添加订单
+  // New order form
   const [newOrder, setNewOrder] = useState({
     customer: "",
     phone: "",
     destination: "",
-    amount: ""
+    amount: "",
+    items: "",
+    weight: ""
   })
 
-  const handleAddOrder = () => {
+  const handleAddOrder = async () => {
     if (newOrder.customer && newOrder.phone && newOrder.destination) {
-      const order: OrderData = {
-        id: generateOrderId(),
-        customer: newOrder.customer,
-        phone: newOrder.phone,
-        destination: newOrder.destination,
-        status: "待发货",
-        amount: newOrder.amount || "¥0",
-        date: new Date().toISOString().split("T")[0]
+      try {
+        const order: Order = {
+          id: generateOrderId(),
+          customer: newOrder.customer,
+          phone: newOrder.phone,
+          destination: newOrder.destination,
+          status: "待发货",
+          amount: newOrder.amount || "¥0",
+          date: new Date().toISOString().split("T")[0],
+          items: newOrder.items,
+          weight: newOrder.weight
+        }
+        await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(order)
+        })
+        loadOrders()
+        setShowAddModal(false)
+        setNewOrder({ customer: "", phone: "", destination: "", amount: "", items: "", weight: "" })
+      } catch (error) {
+        console.error('Failed to add order:', error)
       }
-      const newOrders = [order, ...orders]
-      saveOrders(newOrders)
-      loadOrders()
-      setShowAddModal(false)
-      setNewOrder({ customer: "", phone: "", destination: "", amount: "" })
     }
   }
 
@@ -139,7 +182,7 @@ export default function OrdersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">订单管理</h1>
-          <p className="text-gray-500 mt-1">管理所有物流订单 · 共 {orders.length} 条</p>
+          <p className="text-gray-500 mt-1">管理所有物流订单 - 共 {orders.length} 条</p>
         </div>
         <div className="flex gap-2">
           <button 
@@ -204,96 +247,94 @@ export default function OrdersPage() {
         )}
       </div>
 
-      {/* Table */}
+      {/* Orders Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">订单号</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">客户</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">目的地</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">金额</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">日期</th>
-                <th className="text-right px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {isLoading ? (
+        {isLoading ? (
+          <div className="p-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-gray-500">加载中...</p>
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="p-12 text-center">
+            <FileText className="mx-auto h-12 w-12 text-gray-400" />
+            <p className="mt-4 text-gray-500">暂无订单数据</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    <div className="flex items-center justify-center gap-2">
-                      <RefreshCw className="h-5 w-5 animate-spin" />
-                      加载中...
-                    </div>
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">订单号</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">客户</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">联系方式</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">目的地</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">金额</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">日期</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
                 </tr>
-              ) : filteredOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    {searchTerm || statusFilter ? "没有找到匹配的订单" : "暂无订单数据"}
-                  </td>
-                </tr>
-              ) : (
-                filteredOrders.map((order) => (
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{order.id}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <p className="text-gray-900">{order.customer}</p>
-                        <p className="text-sm text-gray-500">{order.phone}</p>
-                      </div>
+                      <div className="font-medium text-gray-900">{order.id}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">{order.destination}</td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{order.amount}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        order.status === "运输中" ? "bg-blue-100 text-blue-700" :
-                        order.status === "待发货" ? "bg-yellow-100 text-yellow-700" :
-                        "bg-green-100 text-green-700"
+                      <div className="text-sm text-gray-900">{order.customer}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">{order.phone}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-600 max-w-xs truncate">{order.destination}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        order.status === "待发货" ? "bg-yellow-100 text-yellow-800" :
+                        order.status === "运输中" ? "bg-blue-100 text-blue-800" :
+                        order.status === "已送达" ? "bg-green-100 text-green-800" :
+                        "bg-red-100 text-red-800"
                       }`}>
                         {order.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-500">{order.date}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button 
-                          onClick={() => handleViewOrder(order)}
-                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                          title="查看详情"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="p-1 text-gray-400 hover:text-green-600 transition-colors" title="编辑">
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(order.id)}
-                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                          title="删除"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{order.amount}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600">{order.date}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button 
+                        onClick={() => handleViewOrder(order)}
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                      >
+                        <Eye className="h-4 w-4 inline" />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(order.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <Trash2 className="h-4 w-4 inline" />
+                      </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* 新建订单弹窗 */}
+      {/* Add Order Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">新建订单</h3>
+              <h2 className="text-xl font-bold text-gray-900">新建订单</h2>
               <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               </button>
             </div>
             <div className="space-y-4">
@@ -334,179 +375,169 @@ export default function OrdersPage() {
                   value={newOrder.amount}
                   onChange={(e) => setNewOrder({...newOrder, amount: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  placeholder="例如：¥1,000"
+                  placeholder="¥0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">物品</label>
+                <input
+                  type="text"
+                  value={newOrder.items}
+                  onChange={(e) => setNewOrder({...newOrder, items: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="物品描述"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">重量</label>
+                <input
+                  type="text"
+                  value={newOrder.weight}
+                  onChange={(e) => setNewOrder({...newOrder, weight: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="如：50kg"
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={handleAddOrder}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                确认添加
+                创建
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 批量导入弹窗 */}
+      {/* Import Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">批量导入运单号</h3>
+              <h2 className="text-xl font-bold text-gray-900">批量导入订单</h2>
               <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               </button>
             </div>
-            
-            <div className="space-y-4">
-              {/* 导入说明 */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h4 className="font-medium text-blue-800 mb-2">导入格式说明</h4>
-                <p className="text-sm text-blue-700 mb-2">每行一条记录，字段之间用逗号或制表符分隔：</p>
-                <code className="text-xs bg-blue-100 px-2 py-1 rounded text-blue-800">
-                  客户名称, 联系电话, 目的地, 金额(可选)
-                </code>
-                <p className="text-sm text-blue-700 mt-2">示例：</p>
-                <code className="text-xs bg-blue-100 px-2 py-1 rounded text-blue-800 block mt-1">
-                  张三, 13800138001, 北京市朝阳区, ¥1,280<br/>
-                  李四, 13800138002, 上海市浦东新区, ¥2,350
-                </code>
-              </div>
-
-              {/* 导入文本框 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">粘贴数据</label>
-                <textarea
-                  value={importText}
-                  onChange={(e) => handleImportTextChange(e.target.value)}
-                  className="w-full h-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm"
-                  placeholder="在此粘贴数据..."
-                />
-              </div>
-
-              {/* 预览 */}
-              {importPreview.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-700">
-                      预览 ({importPreview.length} 条记录)
-                    </label>
-                    <span className="text-xs text-green-600 flex items-center gap-1">
-                      <Check className="h-3 w-3" />
-                      格式正确
-                    </span>
-                  </div>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left px-3 py-2 font-medium text-gray-500">订单号</th>
-                          <th className="text-left px-3 py-2 font-medium text-gray-500">客户</th>
-                          <th className="text-left px-3 py-2 font-medium text-gray-500">电话</th>
-                          <th className="text-left px-3 py-2 font-medium text-gray-500">目的地</th>
-                          <th className="text-left px-3 py-2 font-medium text-gray-500">金额</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {importPreview.slice(0, 5).map((order, index) => (
-                          <tr key={index}>
-                            <td className="px-3 py-2 font-medium text-gray-900">{order.id}</td>
-                            <td className="px-3 py-2 text-gray-700">{order.customer}</td>
-                            <td className="px-3 py-2 text-gray-700">{order.phone}</td>
-                            <td className="px-3 py-2 text-gray-700">{order.destination}</td>
-                            <td className="px-3 py-2 text-gray-700">{order.amount}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {importPreview.length > 5 && (
-                      <div className="px-3 py-2 bg-gray-50 text-sm text-gray-500 text-center">
-                        还有 {importPreview.length - 5} 条记录...
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">每行一条订单，格式：客户名称, 联系电话, 目的地, 金额（用逗号分隔）</p>
             </div>
-
-            <div className="flex justify-end gap-3 mt-6">
+            <textarea
+              value={importText}
+              onChange={(e) => handleImportTextChange(e.target.value)}
+              className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              placeholder="张三, 13800138001, 北京市朝阳区, ¥2000
+李四, 13800138002, 上海市浦东新区, ¥1500"
+            />
+            {importPreview.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">预览（{importPreview.length} 条）：</p>
+                <div className="bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">
+                  {importPreview.map((order, index) => (
+                    <div key={index} className="text-sm text-gray-600 py-1">
+                      {order.customer} - {order.phone} - {order.destination} - {order.amount}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mt-6 flex gap-3">
               <button
-                onClick={() => setShowImportModal(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => { setShowImportModal(false); setImportText(""); setImportPreview([]) }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 取消
               </button>
               <button
                 onClick={confirmImport}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 disabled={importPreview.length === 0}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                确认导入 ({importPreview.length} 条)
+                确认导入
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 订单详情弹窗 */}
+      {/* Order Detail Modal */}
       {showDetailModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">订单详情</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">订单详情</h2>
               <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               </button>
             </div>
-            <div className="space-y-3">
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">订单号</span>
-                <span className="font-medium">{selectedOrder.id}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">客户</span>
-                <span className="font-medium">{selectedOrder.customer}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">联系电话</span>
-                <span className="font-medium">{selectedOrder.phone}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">目的地</span>
-                <span className="font-medium">{selectedOrder.destination}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">金额</span>
-                <span className="font-medium text-blue-600">{selectedOrder.amount}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">状态</span>
-                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                  selectedOrder.status === "运输中" ? "bg-blue-100 text-blue-700" :
-                  selectedOrder.status === "待发货" ? "bg-yellow-100 text-yellow-700" :
-                  "bg-green-100 text-green-700"
-                }`}>
-                  {selectedOrder.status}
-                </span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-gray-500">创建日期</span>
-                <span className="font-medium">{selectedOrder.date}</span>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">订单号</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">状态</p>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    selectedOrder.status === "待发货" ? "bg-yellow-100 text-yellow-800" :
+                    selectedOrder.status === "运输中" ? "bg-blue-100 text-blue-800" :
+                    "bg-green-100 text-green-800"
+                  }`}>
+                    {selectedOrder.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">客户名称</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.customer}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">联系电话</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.phone}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">目的地</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.destination}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">金额</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.amount}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">日期</p>
+                  <p className="font-medium text-gray-900">{selectedOrder.date}</p>
+                </div>
+                {selectedOrder.items && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-500">物品</p>
+                    <p className="font-medium text-gray-900">{selectedOrder.items}</p>
+                  </div>
+                )}
+                {selectedOrder.weight && (
+                  <div>
+                    <p className="text-sm text-gray-500">重量</p>
+                    <p className="font-medium text-gray-900">{selectedOrder.weight}</p>
+                  </div>
+                )}
+                {selectedOrder.notes && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-500">备注</p>
+                    <p className="font-medium text-gray-900">{selectedOrder.notes}</p>
+                  </div>
+                )}
               </div>
             </div>
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="mt-6">
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 关闭
               </button>

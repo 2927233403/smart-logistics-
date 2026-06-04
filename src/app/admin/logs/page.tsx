@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Search, Download, Filter, Calendar, User, Monitor, Activity, AlertCircle, Info, CheckCircle, XCircle, Clock } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Search, Download, Filter, Calendar, User, Monitor, Activity, AlertCircle, Info, CheckCircle, XCircle, Clock, RefreshCw } from "lucide-react"
 
 interface LogEntry {
   id: string
@@ -34,11 +34,56 @@ const moduleOptions = ["全部模块", "用户认证", "订单管理", "车辆�
 const statusOptions = ["全部状态", "成功", "失败", "警告"]
 
 export default function LogsPage() {
-  const [logs] = useState<LogEntry[]>(initialLogs)
+  const [logs, setLogs] = useState<LogEntry[]>(initialLogs)
+  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [moduleFilter, setModuleFilter] = useState("全部模块")
   const [statusFilter, setStatusFilter] = useState("全部状态")
   const [dateRange, setDateRange] = useState({ start: "", end: "" })
+
+  // 加载日志
+  const loadLogs = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/logs')
+      const data = await response.json()
+      // 转换数据格式以匹配前端
+      const formattedLogs: LogEntry[] = data.map((log: any) => ({
+        id: log.id,
+        timestamp: log.time,
+        user: log.user,
+        action: log.action,
+        module: getModuleFromType(log.type),
+        detail: log.details || '',
+        ip: "127.0.0.1",
+        status: "成功" as const,
+        device: "System"
+      }))
+      setLogs(formattedLogs.length > 0 ? formattedLogs : initialLogs)
+    } catch (error) {
+      console.error('Failed to load logs:', error)
+      setLogs(initialLogs)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 根据日志类型获取模块名称
+  const getModuleFromType = (type: string) => {
+    const moduleMap: Record<string, string> = {
+      order: "订单管理",
+      vehicle: "车辆管理",
+      driver: "司机管理",
+      warehouse: "仓库管理",
+      user: "用户管理",
+      system: "系统设置"
+    }
+    return moduleMap[type] || "系统设置"
+  }
+
+  useEffect(() => {
+    loadLogs()
+  }, [])
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.user.includes(searchQuery) || 
@@ -76,13 +121,22 @@ export default function LogsPage() {
           <h1 className="text-2xl font-bold text-gray-900">操作日志</h1>
           <p className="text-gray-500 mt-1">查看系统操作记录和审计日志</p>
         </div>
-        <button 
-          onClick={handleExport}
-          className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        >
-          <Download className="h-4 w-4" />
-          <span>导出日志</span>
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={loadLogs}
+            className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>刷新</span>
+          </button>
+          <button 
+            onClick={handleExport}
+            className="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            <span>导出日志</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
