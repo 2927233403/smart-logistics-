@@ -75,18 +75,27 @@ export default function MessagesPage() {
   const [isReplying, setIsReplying] = useState(false)
 
   // 加载消息
-  const loadMessages = () => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        setMessages(JSON.parse(stored))
-      } else {
-        // 初始化模拟数据
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(mockMessages))
-        setMessages(mockMessages)
+  const loadMessages = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/messages')
+      const data = await response.json()
+      setMessages(data)
+    } catch (error) {
+      console.error('Failed to load messages:', error)
+      // 如果API失败，使用本地模拟数据
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem(STORAGE_KEY)
+        if (stored) {
+          setMessages(JSON.parse(stored))
+        } else {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(mockMessages))
+          setMessages(mockMessages)
+        }
       }
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   useEffect(() => {
@@ -197,10 +206,14 @@ export default function MessagesPage() {
   }
 
   // 删除消息
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("确定要删除这条消息吗？")) {
-      const updated = messages.filter(m => m.id !== id)
-      saveMessages(updated)
+      try {
+        await fetch(`/api/messages?id=${id}`, { method: 'DELETE' })
+        loadMessages()
+      } catch (error) {
+        console.error('Failed to delete message:', error)
+      }
     }
   }
 
@@ -219,30 +232,22 @@ export default function MessagesPage() {
           second: '2-digit'
         })
         
-        const updatedMessage = { 
-          ...selectedMessage, 
-          status: "replied" as const, 
-          reply: replyText.trim(), 
-          replyTime 
-        }
+        // 通过API更新消息
+        await fetch('/api/messages', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: selectedMessage.id,
+            action: 'reply',
+            reply: replyText.trim(),
+            replyTime
+          })
+        })
         
-        const updated = messages.map(m => 
-          m.id === selectedMessage.id ? updatedMessage : m
-        )
-        
-        // 先更新本地状态
-        setMessages(updated)
-        setSelectedMessage(updatedMessage)
-        
-        // 保存到 localStorage
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-        }
-        
-        // 清空回复文本
+        // 重新加载消息列表
+        loadMessages()
+        setShowDetailModal(false)
         setReplyText("")
-        
-        // 显示成功提示
         alert("回复成功！")
       } catch (error) {
         console.error('回复失败:', error)

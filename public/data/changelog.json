@@ -1,0 +1,130 @@
+[
+  {
+    "version": "v0.1.0",
+    "date": "2026-06-03",
+    "title": "最新更新",
+    "changes": [
+      {
+        "message": "feat: 升级站点资源并优化管理后台与前端页面",
+        "hash": "ed993df",
+        "author": "2927233403",
+        "category": "feature"
+      },
+      {
+        "message": "build: add changelog generation and optimize site metadata",
+        "hash": "90e1568",
+        "author": "2927233403",
+        "category": "enhancement"
+      },
+      {
+        "message": "feat: 新增自动更新日志系统并优化物流平台UI",
+        "hash": "d65bf61",
+        "author": "2927233403",
+        "category": "feature"
+      },
+      {
+        "message": "feat(navbar+homepage): 添加智能搜索建议和更新日志折叠面板",
+        "hash": "31ed571",
+        "author": "2927233403",
+        "category": "feature"
+      },
+      {
+        "message": "chore: 添加临时注释触发Git文件变更检测",
+        "hash": "338b8d1",
+        "author": "2927233403",
+        "category": "enhancement"
+      },
+      {
+        "message": "feat: 添加AI助手页面并更新导航栏，新增软件上传下载功能",
+        "hash": "4021e42",
+        "author": "2927233403",
+        "category": "feature"
+      },
+      {
+        "message": "style(navbar, button): 调整物流追踪按钮样式，优化天气功能",
+        "hash": "2e0a47b",
+        "author": "2927233403",
+        "category": "style"
+      },
+      {
+        "message": "修复Vercel构建问题 - 删除过时的vercel.json配置",
+        "hash": "4fcba5b",
+        "author": "2927233403",
+        "category": "fix"
+      },
+      {
+        "message": "修复定位和购物车功能，优化UI",
+        "hash": "05261be",
+        "author": "2927233403",
+        "category": "fix"
+      },
+      {
+        "message": "feat(navbar+ai-chat): 重构导航栏与AI客服组件，新增多项功能",
+        "hash": "69f3d3b",
+        "author": "2927233403",
+        "category": "feature"
+      },
+      {
+        "message": "chore: 移除备份文件夹",
+        "hash": "47796e5",
+        "author": "2927233403",
+        "category": "enhancement"
+      },
+      {
+        "message": "fix: 修复 navbar 时钟 hydration 错误和 ai-chat timestamp 类型错误",
+        "hash": "c854957",
+        "author": "2927233403",
+        "category": "fix"
+      },
+      {
+        "message": "refactor(navbar): remove duplicate navbar file and optimize time display",
+        "hash": "43df64f",
+        "author": "2927233403",
+        "category": "refactor"
+      },
+      {
+        "message": "fix(typescript): 修复timestamp类型检查错误",
+        "hash": "4521805",
+        "author": "2927233403",
+        "category": "fix"
+      },
+      {
+        "message": "chore: 移除.github目录下的冗余配置和部署文件",
+        "hash": "7486136",
+        "author": "2927233403",
+        "category": "enhancement"
+      },
+      {
+        "message": "feat(barcode-scanner): add scan warning and mock code fallback flow",
+        "hash": "d66f44c",
+        "author": "2927233403",
+        "category": "feature"
+      },
+      {
+        "message": "refactor(navbar): replace hardcoded weather with real location-based weather",
+        "hash": "a3dccae",
+        "author": "2927233403",
+        "category": "refactor"
+      },
+      {
+        "message": "feat: 初始化智能物流管理平台项目",
+        "hash": "2e77422",
+        "author": "2927233403",
+        "category": "feature"
+      },
+      {
+        "message": "Add files via upload",
+        "hash": "74b282c",
+        "author": "2927233403",
+        "category": "enhancement"
+      },
+      {
+        "message": "Add basic CI workflow configuration顾",
+        "hash": "74621d5",
+        "author": "2927233403",
+        "category": "enhancement"
+      }
+    ],
+    "type": "feature"
+  }
+]

@@ -1,8 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect, useRef } from "react"
-import { Menu, X, User, LogOut, Settings, ChevronDown, Zap, Activity, Globe, Terminal, Search, Sun, Cloud, CloudRain, Snowflake, MapPin, Bell, ShoppingCart, BarChart2, Warehouse } from "lucide-react"
+import { useState, useEffect, useRef, useCallback } from "react"
+import { Menu, X, User, LogOut, Settings, ChevronDown, Zap, Activity, Globe, Terminal, Search, Sun, Cloud, CloudRain, Snowflake, MapPin, Bell, ShoppingCart, BarChart2, Warehouse, Sparkles, Truck, Home, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import SmartChineseLogo from "@/components/SmartChineseLogo"
@@ -12,20 +12,218 @@ export function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [userName, setUserName] = useState("")
-  const [currentTime, setCurrentTime] = useState(new Date())
+  const [currentTime, setCurrentTime] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [activeLink, setActiveLink] = useState("")
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [weather, setWeather] = useState({ temp: "--", condition: "sunny", city: "未知" })
+  const [weather, setWeather] = useState({ temp: "--", condition: "sunny", city: "定位中..." })
+  const [weatherLoading, setWeatherLoading] = useState(true)
   const [notifications] = useState([
     { id: 1, message: "您的订单已发货", time: "10分钟前" },
     { id: 2, message: "新的物流信息更新", time: "30分钟前" },
   ])
   const [showNotifications, setShowNotifications] = useState(false)
   const [showCart, setShowCart] = useState(false)
-  const [cartItems] = useState(0)
+  const [cartItems, setCartItems] = useState(0)
+  const [showSmartPanel, setShowSmartPanel] = useState(false)
+  const [isNavVisible, setIsNavVisible] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([])
+  const [systemInfo, setSystemInfo] = useState({ version: "v0.1.0", lastUpdate: "获取中...", environment: "开发环境" })
   const searchRef = useRef<HTMLDivElement>(null)
+
+  // 智能搜索建议
+  const allSuggestions = [
+    "物流追踪", "订单查询", "国际快递", "仓储服务", 
+    "配送服务", "货物保险", "智能调度", "运费计算",
+    "上门取件", "电子面单", "批量下单", "对账单"
+  ]
+
+  // 将天气代码转换为我们需要的状态
+  const getConditionFromCode = (code: number): string => {
+    if (code === 0) return 'sunny'
+    if (code >= 1 && code <= 3) return 'cloudy'
+    if (code >= 51 && code <= 67) return 'rainy'
+    if (code >= 71 && code <= 86) return 'snowy'
+    if (code >= 95) return 'rainy'
+    return 'sunny'
+  }
+
+  // 根据坐标获取天气
+  const fetchWeatherByCoords = useCallback(async (lat: number, lon: number, defaultCity?: string) => {
+    try {
+      let cityName = defaultCity || "未知"
+      
+      // 尝试获取城市名
+      try {
+        const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
+          signal: AbortSignal.timeout(3000)
+        })
+        if (geoResponse.ok) {
+          const geoData = await geoResponse.json()
+          cityName = geoData.address?.city || geoData.address?.town || geoData.address?.county || geoData.address?.state || geoData.address?.country || "未知"
+        }
+      } catch (e) {
+        // 如果地理编码失败，使用默认城市名
+      }
+      
+      // 获取天气
+      const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`)
+      const weatherData = await weatherResponse.json()
+      
+      const temp = `${Math.round(weatherData.current.temperature_2m)}°C`
+      const condition = getConditionFromCode(weatherData.current.weather_code)
+      
+      // 保存位置供下次使用
+      localStorage.setItem("last_location", JSON.stringify({ lat, lon, city: cityName }))
+      
+      setWeather({ temp, condition, city: cityName })
+    } catch (error) {
+      console.log("获取天气失败", error)
+      if (!defaultCity) {
+        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
+      }
+    } finally {
+      setWeatherLoading(false)
+    }
+  }, [])
+
+  // 尝试更新位置但不阻塞显示
+  const tryUpdateLocation = useCallback(async () => {
+    try {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords
+            await fetchWeatherByCoords(latitude, longitude)
+          },
+          undefined,
+          { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
+        )
+      }
+    } catch (error) {
+      // 静默失败，不打印错误
+    }
+  }, [fetchWeatherByCoords])
+
+  // 获取用户位置和天气 - 优化版
+  const getLocationAndWeather = useCallback(async (forceRefresh = false) => {
+    setWeatherLoading(true)
+    
+    // 如果不是强制刷新，先尝试从localStorage获取上次位置作为快速显示
+    if (!forceRefresh) {
+      const savedLocation = localStorage.getItem("last_location")
+      if (savedLocation) {
+        try {
+          const loc = JSON.parse(savedLocation)
+          await fetchWeatherByCoords(loc.lat, loc.lon, loc.city)
+          // 同时继续尝试更新位置
+          tryUpdateLocation()
+          return
+        } catch (e) {
+          // 继续其他方案
+        }
+      }
+    } else {
+      // 强制刷新时清除缓存
+      localStorage.removeItem("last_location")
+    }
+
+    // 多级降级方案
+    try {
+      if (navigator.geolocation) {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          const timeoutId = setTimeout(() => reject(new Error("定位超时")), 8000)
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              clearTimeout(timeoutId)
+              resolve(pos)
+            },
+            (err) => {
+              clearTimeout(timeoutId)
+              reject(err)
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+          )
+        })
+        
+        const { latitude, longitude } = position.coords
+        await fetchWeatherByCoords(latitude, longitude)
+        return
+      }
+    } catch (error) {
+      // 静默失败，不打印错误
+    }
+    
+    // 最终使用默认数据（跳过所有IP定位，避免网络错误）
+    setWeather({ temp: "25°C", condition: "sunny", city: "义乌" })
+    setWeatherLoading(false)
+  }, [fetchWeatherByCoords, tryUpdateLocation])
+
+  // 购物车初始化
+  const initCart = useCallback(() => {
+    const savedCart = localStorage.getItem("cart")
+    if (savedCart) {
+      try {
+        const cart = JSON.parse(savedCart)
+        setCartItems(cart.length || 0)
+      } catch (e) {
+        setCartItems(0)
+      }
+    }
+  }, [])
+
+  // 获取系统信息
+  const fetchSystemInfo = useCallback(async () => {
+    try {
+      // 从更新日志获取最后更新时间
+      const response = await fetch('/data/changelog.json')
+      if (response.ok) {
+        const data = await response.json()
+        if (data.length > 0 && data[0].date) {
+          // 获取当前时间用于时间显示
+          const now = new Date()
+          const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+          setSystemInfo(prev => ({
+            ...prev,
+            lastUpdate: `${data[0].date} ${timeStr}`
+          }))
+        }
+      }
+    } catch (error) {
+      // 如果获取失败，使用默认值
+      const now = new Date()
+      const dateStr = now.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')
+      const timeStr = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      setSystemInfo(prev => ({
+        ...prev,
+        lastUpdate: `${dateStr} ${timeStr}`
+      }))
+    }
+    
+    // 检测运行环境
+    const env = process.env.NODE_ENV || 'development'
+    const envText = env === 'production' ? '生产环境' : '开发环境'
+    setSystemInfo(prev => ({
+      ...prev,
+      environment: envText
+    }))
+  }, [])
+
+  // 监听购物车变化
+  const handleCartChange = useCallback(() => {
+    const savedCart = localStorage.getItem("cart")
+    if (savedCart) {
+      try {
+        const cart = JSON.parse(savedCart)
+        setCartItems(cart.length || 0)
+      } catch (e) {
+        setCartItems(0)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const checkLoginStatus = () => {
@@ -39,8 +237,11 @@ export function Navbar() {
     checkLoginStatus()
     window.addEventListener("storage", checkLoginStatus)
     
+    setMounted(true)
+    
     // 时钟更新
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    const timer = setInterval(() => setCurrentTime(new Date().toLocaleTimeString('zh-CN')), 1000)
+    setCurrentTime(new Date().toLocaleTimeString('zh-CN'))
     
     // 滚动监听
     const handleScroll = () => {
@@ -73,91 +274,22 @@ export function Navbar() {
     }
     document.addEventListener('mousedown', handleClickOutside)
     
-    // 获取用户位置和天气
-    const getLocationAndWeather = async () => {
-      try {
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              const { latitude, longitude } = position.coords
-              await fetchWeatherByCoords(latitude, longitude)
-            },
-            async (error) => {
-              console.log("无法获取位置，使用IP定位或默认位置", error)
-              await fetchWeatherByIP()
-            }
-          )
-        } else {
-          await fetchWeatherByIP()
-        }
-      } catch (error) {
-        console.log("获取天气失败，使用默认数据", error)
-        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
-      }
-    }
-    
-    // 根据坐标获取天气
-    const fetchWeatherByCoords = async (lat: number, lon: number) => {
-      try {
-        const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-        const geoData = await geoResponse.json()
-        const cityName = geoData.address?.city || geoData.address?.town || geoData.address?.county || "未知"
-        
-        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`)
-        const weatherData = await weatherResponse.json()
-        
-        const temp = `${Math.round(weatherData.current.temperature_2m)}°C`
-        const condition = getConditionFromCode(weatherData.current.weather_code)
-        
-        setWeather({ temp, condition, city: cityName })
-      } catch (error) {
-        console.log("获取天气失败", error)
-        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
-      }
-    }
-    
-    // 根据IP获取天气（备用方案）
-    const fetchWeatherByIP = async () => {
-      try {
-        const ipResponse = await fetch('https://ipapi.co/json/')
-        const ipData = await ipResponse.json()
-        const cityName = ipData.city || "上海"
-        const lat = ipData.latitude || 31.2304
-        const lon = ipData.longitude || 121.4737
-        
-        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`)
-        const weatherData = await weatherResponse.json()
-        
-        const temp = `${Math.round(weatherData.current.temperature_2m)}°C`
-        const condition = getConditionFromCode(weatherData.current.weather_code)
-        
-        setWeather({ temp, condition, city: cityName })
-      } catch (error) {
-        console.log("IP定位获取天气失败", error)
-        setWeather({ temp: "25°C", condition: "sunny", city: "上海" })
-      }
-    }
-    
-    // 将天气代码转换为我们需要的状态
-    const getConditionFromCode = (code: number): string => {
-      if (code === 0) return 'sunny'
-      if (code >= 1 && code <= 3) return 'cloudy'
-      if (code >= 51 && code <= 67) return 'rainy'
-      if (code >= 71 && code <= 86) return 'snowy'
-      if (code >= 95) return 'rainy'
-      return 'sunny'
-    }
-    
     getLocationAndWeather()
+    initCart()
+    fetchSystemInfo()
+    
+    // 监听购物车变化
+    window.addEventListener("storage", handleCartChange)
     
     return () => {
       window.removeEventListener("storage", checkLoginStatus)
+      window.removeEventListener("storage", handleCartChange)
       window.removeEventListener("scroll", handleScroll)
       window.removeEventListener("popstate", checkActiveLink)
       document.removeEventListener('mousedown', handleClickOutside)
       clearInterval(timer)
     }
-  }, [])
+  }, [getLocationAndWeather, initCart, handleCartChange, fetchSystemInfo])
 
   const handleLogout = () => {
     localStorage.removeItem("user_logged_in")
@@ -172,12 +304,33 @@ export function Navbar() {
     if (searchQuery.trim()) {
       // 这里可以实现搜索功能
       console.log('搜索:', searchQuery)
+      // 根据搜索内容跳转到相应页面
+      if (searchQuery.includes('追踪') || searchQuery.includes('订单')) {
+        window.location.href = '/tracking'
+      } else if (searchQuery.includes('仓储')) {
+        window.location.href = '/warehouse'
+      } else if (searchQuery.includes('AI') || searchQuery.includes('助手')) {
+        window.location.href = '/ai-chat'
+      }
     }
   }
+
+  // 智能搜索建议更新
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const filtered = allSuggestions.filter(s => 
+        s.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      setSearchSuggestions(filtered.slice(0, 5))
+    } else {
+      setSearchSuggestions(allSuggestions.slice(0, 6))
+    }
+  }, [searchQuery])
 
   const navLinks = [
     { href: "/", label: "首页", icon: Zap },
     { href: "/tracking", label: "物流追踪", icon: Activity },
+    { href: "/ai-chat", label: "AI助手", icon: Sparkles },
     { href: "/services", label: "服务介绍", icon: Globe },
     { href: "/warehouse", label: "仓储管理", icon: Warehouse },
     { href: "/admin", label: "管理后台", icon: Terminal },
@@ -212,14 +365,14 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 group">
             <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all duration-300 group-hover:scale-110 animate-float">
-                <SmartChineseLogo variant="mini" className="w-8 h-8" animated={true} />
+              <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/30 group-hover:shadow-cyan-500/50 transition-all duration-300 group-hover:scale-110 animate-float overflow-hidden">
+                <Truck className="h-6 w-6 text-white" />
               </div>
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
             </div>
             <div className="hidden sm:block">
-              <span className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-400 transition-colors duration-300">测试网站-吴</span>
-              <span className="text-xs text-blue-400 block tracking-wider group-hover:text-cyan-400 transition-colors duration-300">SMART LOGISTICS</span>
+              <span className="text-lg font-bold text-white tracking-tight group-hover:text-cyan-400 transition-colors duration-300">智能物流管理平台</span>
+              <span className="text-xs text-cyan-400 block tracking-wider group-hover:text-cyan-300 transition-colors duration-300">Smart Logistics</span>
             </div>
           </Link>
 
@@ -257,66 +410,278 @@ export function Navbar() {
                 <Search className="h-5 w-5 text-slate-400 hover:text-white" />
               </button>
               {showSearch && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 p-3 z-50 animate-slide-in-from-right">
-                  <form onSubmit={handleSearch} className="flex items-center space-x-2">
-                    <Input
-                      type="text"
-                      placeholder="搜索订单、服务或路线..."
-                      className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <Button type="submit" size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30 border-0">
+                <div className="absolute right-0 top-full mt-2 w-96 bg-slate-900/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 p-4 z-50 animate-slide-in-from-right">
+                  <form onSubmit={handleSearch} className="flex items-center space-x-2 mb-3">
+                    <div className="flex-1 relative">
+                      <Input
+                        type="text"
+                        placeholder="搜索订单、服务或路线..."
+                        className="bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-cyan-500 pr-10"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        autoFocus
+                      />
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    </div>
+                    <Button type="submit" size="sm" className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white shadow-lg shadow-cyan-500/30 border-0">
                       搜索
                     </Button>
                   </form>
-                  <div className="mt-2 text-xs text-slate-500">
-                    热门搜索: 物流追踪, 国际快递, 仓储服务
+                  
+                  {/* 智能搜索建议 */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-slate-500 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3 text-cyan-400" />
+                        智能建议
+                      </span>
+                      {searchQuery && (
+                        <span className="text-xs text-cyan-400">找到 {searchSuggestions.length} 个结果</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {searchSuggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setSearchQuery(suggestion)
+                            handleSearch({ preventDefault: () => {} } as any)
+                          }}
+                          className="px-3 py-1.5 text-xs rounded-lg bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 hover:text-white transition-all duration-200 border border-slate-700/30 hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3 pt-3 border-t border-slate-700/30 text-xs text-slate-500 flex items-center gap-2">
+                    <kbd className="px-2 py-0.5 rounded bg-slate-800 text-slate-400">Enter</kbd>
+                    <span>快速搜索</span>
+                    <kbd className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 ml-2">Esc</kbd>
+                    <span>关闭</span>
                   </div>
                 </div>
               )}
             </div>
             
-            {/* 天气信息 */}
-            <div className="flex items-center space-x-2 text-sm text-slate-300 hover:text-white transition-colors duration-300">
-              <MapPin className="h-4 w-4 text-blue-400" />
-              <span>{weather.city}</span>
-              {getWeatherIcon(weather.condition)}
+            {/* 天气信息 - 可点击刷新 */}
+            <button
+              onClick={() => getLocationAndWeather(true)}
+              className={`flex items-center space-x-2 text-sm transition-all duration-300 hover:bg-slate-800/50 px-3 py-1.5 rounded-xl ${
+                weatherLoading ? 'opacity-70 cursor-wait' : 'text-slate-300 hover:text-white cursor-pointer'
+              }`}
+              title="点击刷新天气（强制刷新会清除缓存并重新定位"
+            >
+              <MapPin className={`h-4 w-4 ${weatherLoading ? 'text-slate-500 animate-pulse' : 'text-blue-400'}`} />
+              <span className={weatherLoading ? 'animate-pulse' : ''}>{weather.city}</span>
+              {weatherLoading ? (
+                <div className="w-4 h-4 border-2 border-slate-500 border-t-blue-400 rounded-full animate-spin"></div>
+              ) : (
+                getWeatherIcon(weather.condition)
+              )}
               <span>{weather.temp}</span>
-            </div>
+            </button>
             
             {/* 购物车 */}
             <div className="relative cart-container">
               <button
                 onClick={() => setShowCart(!showCart)}
-                className="relative p-2 rounded-full hover:bg-slate-800/50 transition-colors duration-300"
+                className="relative p-2 rounded-full hover:bg-slate-800/50 transition-all duration-300 group"
               >
-                <ShoppingCart className="h-5 w-5 text-slate-400 hover:text-white" />
+                <ShoppingCart className="h-5 w-5 text-slate-400 group-hover:text-white transition-colors" />
                 {cartItems > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center animate-pulse">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-red-500 to-pink-500 rounded-full text-white text-xs flex items-center justify-center animate-bounce shadow-lg shadow-red-500/30">
                     {cartItems}
                   </span>
                 )}
               </button>
               {showCart && (
                 <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 p-4 z-50 animate-slide-in-from-right">
-                  <h3 className="text-sm font-medium text-white mb-3">购物车</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-white">购物车</h3>
+                    <button
+                      onClick={() => {
+                        localStorage.setItem("cart", JSON.stringify([]))
+                        setCartItems(0)
+                        window.dispatchEvent(new Event('storage'))
+                      }}
+                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      清空
+                    </button>
+                  </div>
                   {cartItems === 0 ? (
-                    <p className="text-slate-400 text-sm">购物车为空</p>
+                    <div className="text-center py-8">
+                      <ShoppingCart className="h-12 w-12 text-slate-600 mx-auto mb-3" />
+                      <p className="text-slate-400 text-sm">购物车为空</p>
+                      <p className="text-slate-500 text-xs mt-1">去逛逛添加商品吧</p>
+                    </div>
                   ) : (
-                    <div className="space-y-3">
-                      {/* 购物车项目 */}
-                      <div className="flex items-center justify-between pb-2 border-b border-slate-700/50">
-                        <span className="text-sm text-slate-300">标准物流服务</span>
-                        <span className="text-sm text-white">¥100.00</span>
-                      </div>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {(() => {
+                        try {
+                          const savedCart = localStorage.getItem("cart")
+                          const cart = savedCart ? JSON.parse(savedCart) : []
+                          if (cart.length === 0) return null
+                          return cart.map((item: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between pb-2 border-b border-slate-700/50 group">
+                              <div className="flex-1">
+                                <p className="text-sm text-slate-300 group-hover:text-white transition-colors">{item.name}</p>
+                                <p className="text-xs text-slate-500">{item.desc || ''}</p>
+                              </div>
+                              <div className="text-right ml-3">
+                                <p className="text-sm text-white font-medium">{item.price}</p>
+                                <p className="text-xs text-slate-500">x{item.quantity || 1}</p>
+                              </div>
+                            </div>
+                          ))
+                        } catch {
+                          return null
+                        }
+                      })()}
                     </div>
                   )}
                   {cartItems > 0 && (
-                    <Button className="w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30 border-0">
-                      结算
-                    </Button>
+                    <div className="mt-4 pt-4 border-t border-slate-700/50">
+                      <div className="flex justify-between mb-3">
+                        <span className="text-slate-400 text-sm">合计</span>
+                        <span className="text-white font-semibold text-lg">
+                          {(() => {
+                            try {
+                              const savedCart = localStorage.getItem("cart")
+                              const cart = savedCart ? JSON.parse(savedCart) : []
+                              let total = 0
+                              cart.forEach((item: any) => {
+                                const price = parseFloat((item.price || '0').replace(/[^0-9.]/g, ''))
+                                total += price * (item.quantity || 1)
+                              })
+                              return `¥${total.toFixed(2)}`
+                            } catch {
+                              return '¥0.00'
+                            }
+                          })()}
+                        </span>
+                      </div>
+                      <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/30 border-0">
+                        去结算
+                      </Button>
+                    </div>
                   )}
+                </div>
+              )}
+            </div>
+            
+            {/* 智能面板 - 返回主页 */}
+            <div className="relative smart-panel-container">
+              <button
+                onClick={() => setShowSmartPanel(!showSmartPanel)}
+                className="relative p-2 rounded-full hover:bg-slate-800/50 transition-all duration-300 group"
+                title="智能面板"
+              >
+                <Home className="h-5 w-5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
+              </button>
+              {showSmartPanel && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-cyan-500/20 border border-slate-700/50 p-4 z-50 animate-slide-in-from-right">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-cyan-400" />
+                      <h3 className="text-sm font-medium text-white">智能面板</h3>
+                    </div>
+                    <span className="text-xs text-cyan-400">快捷操作</span>
+                  </div>
+                  
+                  {/* 快捷导航 */}
+                  <div className="space-y-2">
+                    <Link 
+                      href="/" 
+                      onClick={() => setShowSmartPanel(false)}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-200 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+                        <Home className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white group-hover:text-cyan-400 transition-colors">返回主页</p>
+                        <p className="text-xs text-slate-500">快速返回首页</p>
+                      </div>
+                    </Link>
+                    
+                    <Link 
+                      href="/ai-chat" 
+                      onClick={() => setShowSmartPanel(false)}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-200 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center">
+                        <MessageSquare className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white group-hover:text-cyan-400 transition-colors">AI助手</p>
+                        <p className="text-xs text-slate-500">智能客服咨询</p>
+                      </div>
+                    </Link>
+                    
+                    <Link 
+                      href="/tracking" 
+                      onClick={() => setShowSmartPanel(false)}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-200 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                        <MapPin className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white group-hover:text-cyan-400 transition-colors">物流追踪</p>
+                        <p className="text-xs text-slate-500">实时货物跟踪</p>
+                      </div>
+                    </Link>
+                    
+                    <Link 
+                      href="/warehouse" 
+                      onClick={() => setShowSmartPanel(false)}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-200 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                        <Warehouse className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-white group-hover:text-cyan-400 transition-colors">仓储管理</p>
+                        <p className="text-xs text-slate-500">库存与订单管理</p>
+                      </div>
+                    </Link>
+                  </div>
+                  
+                  {/* 系统信息 */}
+                  <div className="mt-3 pt-3 border-t border-slate-700/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Terminal className="h-3 w-3 text-green-400" />
+                      <span className="text-xs text-slate-500">系统信息</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">版本号</span>
+                        <span className="text-cyan-400 font-medium">{systemInfo.version}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">最后更新</span>
+                        <span className="text-slate-300">{systemInfo.lastUpdate}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-500">运行环境</span>
+                        <span className={systemInfo.environment === '生产环境' ? 'text-green-400' : systemInfo.environment === '测试环境' ? 'text-yellow-400' : 'text-blue-400'}>{systemInfo.environment}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* 智能提示 */}
+                  <div className="mt-3 pt-3 border-t border-slate-700/30">
+                    <div className="flex items-start gap-2">
+                      <Zap className="h-3 w-3 text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-slate-400">
+                        点击图标可快速导航到常用功能
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -325,29 +690,61 @@ export function Navbar() {
             <div className="relative notification-container">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 rounded-full hover:bg-slate-800/50 transition-colors duration-300"
+                className="relative p-2 rounded-full hover:bg-slate-800/50 transition-all duration-300 group"
               >
-                <Bell className="h-5 w-5 text-slate-400 hover:text-white" />
+                <Bell className="h-5 w-5 text-slate-400 group-hover:text-cyan-400 transition-colors" />
                 {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center animate-pulse">
-                    {notifications.length}
-                  </span>
+                  <>
+                    {/* 高级质感徽章 */}
+                    <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full text-white text-xs font-medium flex items-center justify-center shadow-lg shadow-cyan-500/30 group-hover:shadow-cyan-400/50 transition-all duration-300">
+                      {notifications.length}
+                    </span>
+                    {/* 脉冲光环效果 */}
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-cyan-400 rounded-full animate-ping opacity-30"></span>
+                  </>
                 )}
               </button>
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-blue-500/20 border border-slate-700/50 p-4 z-50 animate-slide-in-from-right">
-                  <h3 className="text-sm font-medium text-white mb-3">通知</h3>
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {notifications.map((notification) => (
-                      <div key={notification.id} className="p-2 rounded-lg hover:bg-slate-800/50 transition-colors duration-300">
-                        <p className="text-sm text-slate-300">{notification.message}</p>
-                        <p className="text-xs text-slate-500">{notification.time}</p>
+                <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900/95 backdrop-blur-xl rounded-xl shadow-2xl shadow-cyan-500/10 border border-slate-700/50 z-50 overflow-hidden">
+                  {/* 头部 */}
+                  <div className="px-4 py-3 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border-b border-slate-700/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+                        <h3 className="text-sm font-medium text-white">智能通知</h3>
+                      </div>
+                      <span className="text-xs text-slate-500">{notifications.length} 条未读</span>
+                    </div>
+                  </div>
+                  
+                  {/* 通知列表 */}
+                  <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
+                    {notifications.map((notification, index) => (
+                      <div 
+                        key={notification.id} 
+                        className="p-3 rounded-lg hover:bg-slate-800/50 transition-all duration-300 group cursor-pointer border border-transparent hover:border-cyan-500/20"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            index === 0 ? 'bg-gradient-to-br from-cyan-500 to-blue-500' : 'bg-gradient-to-br from-violet-500 to-purple-500'
+                          }`}>
+                            <Bell className="h-4 w-4 text-white" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-slate-200 group-hover:text-white transition-colors">{notification.message}</p>
+                            <p className="text-xs text-slate-500 mt-1">{notification.time}</p>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full mt-3 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">
-                    查看全部
-                  </Button>
+                  
+                  {/* 底部 */}
+                  <div className="px-4 py-3 border-t border-slate-700/30 bg-slate-800/30">
+                    <Button variant="ghost" size="sm" className="w-full text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-all">
+                      查看全部通知
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -355,7 +752,7 @@ export function Navbar() {
             {/* 时间显示 */}
             <div className="flex items-center space-x-2 text-xs font-mono text-slate-500 hover:text-slate-400 transition-colors duration-300">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>{currentTime.toLocaleTimeString('zh-CN')}</span>
+              <span>{mounted ? (currentTime || '--:--:--') : '--:--:--'}</span>
             </div>
           </div>
 
@@ -452,14 +849,14 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-xl transition-all ${
+                  className={`flex items-center space-x-3 px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 ${
                     activeLink === link.href 
                       ? 'text-white bg-slate-800/70 border border-slate-700/50' 
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                   }`}
                   onClick={() => setIsOpen(false)}
                 >
-                  <link.icon className={`h-5 w-5 ${
+                  <link.icon className={`h-5 w-5 transition-colors ${
                     activeLink === link.href ? 'text-cyan-400' : 'text-blue-400'
                   }`} />
                   <span>{link.label}</span>
